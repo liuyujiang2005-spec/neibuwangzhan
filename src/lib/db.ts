@@ -243,6 +243,7 @@ function initTables(database: Database.Database) {
       name TEXT NOT NULL,
       file_type TEXT DEFAULT '',
       status TEXT NOT NULL DEFAULT '待审核',
+      direction TEXT DEFAULT 'client_to_us' CHECK(direction IN ('client_to_us', 'us_to_client')),
       uploaded_by TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     );
@@ -254,6 +255,8 @@ function initTables(database: Database.Database) {
       amount REAL NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'pending',
       description TEXT DEFAULT '',
+      payment_method TEXT DEFAULT '',
+      slip_number TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -289,6 +292,11 @@ function initTables(database: Database.Database) {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+
+  // Migrations for existing databases
+  try { database.exec("ALTER TABLE finances ADD COLUMN payment_method TEXT DEFAULT ''"); } catch {}
+  try { database.exec("ALTER TABLE finances ADD COLUMN slip_number TEXT DEFAULT ''"); } catch {}
+  try { database.exec("ALTER TABLE documents ADD COLUMN direction TEXT DEFAULT 'client_to_us' CHECK(direction IN ('client_to_us', 'us_to_client'))"); } catch {}
 }
 
 /* ── 种子数据 ── */

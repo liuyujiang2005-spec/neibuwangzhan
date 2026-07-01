@@ -18,12 +18,12 @@ export async function POST(
   const { id } = await params;
   const db = getDb();
   const body = await req.json();
-  const { name, file_type, uploaded_by } = body;
+  const { name, file_type, uploaded_by, direction } = body;
   if (!name) return NextResponse.json({ error: "请提供文档名称" }, { status: 400 });
 
   const result = db.prepare(
-    "INSERT INTO documents (order_id, name, file_type, status, uploaded_by) VALUES (?, ?, ?, '待审核', ?)"
-  ).run(id, name, file_type || "", uploaded_by || "");
+    "INSERT INTO documents (order_id, name, file_type, status, direction, uploaded_by) VALUES (?, ?, ?, '待审核', ?, ?)"
+  ).run(id, name, file_type || "", direction || "client_to_us", uploaded_by || "");
   const doc = db.prepare("SELECT * FROM documents WHERE id = ?").get(result.lastInsertRowid);
   return NextResponse.json(doc, { status: 201 });
 }

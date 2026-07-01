@@ -18,12 +18,12 @@ export async function POST(
   const { id } = await params;
   const db = getDb();
   const body = await req.json();
-  const { type, amount, description } = body;
+  const { type, amount, description, payment_method, slip_number } = body;
   if (!type || !amount) return NextResponse.json({ error: "请提供类型和金额" }, { status: 400 });
 
   const result = db.prepare(
-    "INSERT INTO finances (order_id, type, amount, status, description) VALUES (?, ?, ?, 'pending', ?)"
-  ).run(id, type, amount, description || "");
+    "INSERT INTO finances (order_id, type, amount, status, description, payment_method, slip_number) VALUES (?, ?, ?, 'pending', ?, ?, ?)"
+  ).run(id, type, amount, description || "", payment_method || "", slip_number || "");
   const fin = db.prepare("SELECT * FROM finances WHERE id = ?").get(result.lastInsertRowid);
   return NextResponse.json(fin, { status: 201 });
 }
