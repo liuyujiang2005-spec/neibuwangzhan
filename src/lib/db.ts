@@ -50,14 +50,17 @@ const businessSteps: Record<number, StepTemplate[]> = {
   ],
   4: [
     { name: "客户发产品图+规格书", assignee: "Fern" },
-    { name: "发给您查确认是否需TISI", assignee: "Fern" },
-    { name: "准备全套文件（ISO+CB+工厂文件+公司证书+PP20+护照）", assignee: "Fern" },
+    { name: "Fern发送产品图+规格书给Khun Ja检查是否需要TISI", assignee: "Fern" },
+    { name: "Khun Ja确认可做，准备全套文件(ISO/CB/工厂文件/公司证书/PP20/护照)发送Khun Ja", assignee: "Fern" },
     { name: "TISI网站注册登记", assignee: "Fern" },
     { name: "准备授权委托书", assignee: "Fern" },
     { name: "等TISI官员联系补充文件", assignee: "Fern" },
-    { name: "审批通过后寄样送检（协调Next要HS-code清关）", assignee: "Fern" },
-    { name: "等待检测结果", assignee: "" },
-    { name: "收到TISI证书", assignee: "Fern" },
+    { name: "审批通过，协调Next获取HS-code准备清关", assignee: "Fern" },
+    { name: "NSW系统获取TISI进口单据", assignee: "Fern" },
+    { name: "货物清关到达泰国，安排送至TISI", assignee: "Fern" },
+    { name: "官员送样品至实验室检测", assignee: "" },
+    { name: "等待检测结果，Khun Ja通知下一步", assignee: "" },
+    { name: "收到TISI证书，总周期约3-4个月", assignee: "Fern" },
   ],
   5: [
     { name: "收集资料（产品名+标签+ISO+CFS+配方+工序+成分）", assignee: "Ing" },
@@ -164,6 +167,10 @@ export function getBusinessSteps(businessTypeId: number, subServiceType?: string
     { name: "提交Lazada系统", assignee: "" },
     { name: "商品需有FDA/TISI认证（检查）", assignee: "" },
     { name: "店铺上线", assignee: "" },
+  ];
+  // NBTC is a TISI sub-service, currently no dedicated step template
+  if (subServiceType === "nbtc") return [
+    { name: "暂无负责人 — NBTC流程待确认", assignee: "" },
   ];
   return businessSteps[businessTypeId] || [{ name: "待定", assignee: "" }];
 }
@@ -375,13 +382,13 @@ function seedData(database: Database.Database) {
 
         // Seed step_documents for ORD-004 (TISI)
         const docs_004 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-004' ORDER BY step_order").all() as { id: number }[];
-        if (docs_004.length >= 9 && tisiDocs) {
+        if (docs_004.length >= 12 && tisiDocs) {
           for (const [stepIdx, docs] of Object.entries(tisiDocs)) {
             const si = Number(stepIdx) - 1;
             docs.forEach((doc) => insertStepDoc.run(docs_004[si].id, "ORD-004", doc, "pending"));
           }
         }
-        database.prepare("UPDATE order_steps SET deadline = datetime('now', '+45 days') WHERE order_id = 'ORD-004' AND step_order = 8").run();
+        database.prepare("UPDATE order_steps SET deadline = datetime('now', '+45 days') WHERE order_id = 'ORD-004' AND step_order = 11").run();
 
         // Seed step_documents for ORD-005 (DLD)
         const docs_005 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-005' ORDER BY step_order").all() as { id: number }[];
@@ -415,19 +422,32 @@ function seedData(database: Database.Database) {
           }
         }
 
-        // Seed logistics for ORD-004 step 7
-        database.prepare("UPDATE order_steps SET logistics_status = 'transporting', step_data = ? WHERE order_id = 'ORD-004' AND step_order = 7").run(JSON.stringify({
+        // Seed logistics for ORD-004 steps 7-10 (split from original single step 7)
+        // Step 7: 协调Next获取HS-code (status: 进行中)
+        database.prepare("UPDATE order_steps SET logistics_status = 'active', step_data = ? WHERE order_id = 'ORD-004' AND step_order = 7").run(JSON.stringify({
           contact_next: { name: "Next", role: "清关代理", contact: "next@logistics.com" },
-          contact_expert: { name: "คุณจ๋า", role: "TISI顾问", note: "已确认需要TISI认证" },
           hs_code: "8517.62.00",
+          step_detail: "已从Next获取HS-code，准备清关文件",
+        }));
+        // Step 8: NSW系统获取进口单据 (status: 待处理)
+        database.prepare("UPDATE order_steps SET step_data = ? WHERE order_id = 'ORD-004' AND step_order = 8").run(JSON.stringify({
+          nsw_system: "Thailand National Single Window",
+          step_detail: "待从TISI NSW系统获取进口电子单据",
+        }));
+        // Step 9: 货物清关到达泰国 (status: 待处理)
+        database.prepare("UPDATE order_steps SET logistics_status = 'transporting', step_data = ? WHERE order_id = 'ORD-004' AND step_order = 9").run(JSON.stringify({
           logistics: [
-            { step: "问Next要HS码", status: "completed", note: "HS码: 8517.62.00" },
-            { step: "准备清关文件", status: "completed", note: "发票+箱单+委托书已齐" },
-            { step: "样品从中国发货到泰国", status: "active", note: "物流单号: SF123456789" },
-            { step: "样品到泰国后发给TISI实验室", status: "pending" },
-            { step: "TISI送实验室检测", status: "pending" },
+            { step: "准备清关文件(发票+箱单+委托书)", status: "pending" },
+            { step: "样品从中国发货到泰国", status: "pending" },
+            { step: "货物清关", status: "pending" },
+            { step: "安排送至TISI", status: "pending" },
           ],
         }));
+        // Step 10: 官员送检 (status: 待处理)
+        database.prepare("UPDATE order_steps SET step_data = ? WHERE order_id = 'ORD-004' AND step_order = 10").run(JSON.stringify({
+          step_detail: "等待官员联系安排实验室检测",
+        }));
+        // Step 2 external check (unchanged)
         database.prepare("UPDATE order_steps SET step_data = ? WHERE order_id = 'ORD-004' AND step_order = 2").run(JSON.stringify({
           external_check: { name: "คุณจ๋า", result: "确认需要TISI认证", date: "2026-07-01" },
         }));
