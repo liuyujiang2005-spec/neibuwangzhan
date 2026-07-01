@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { tasks, statusColumns, type TaskStatus } from "@/mock/tasks";
 import type { Task } from "@/mock/tasks";
@@ -80,11 +80,16 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>
-            {businessFilter ? `${businessFilter} · 任务` : "任务看板"}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">张三手上有 {taskList.filter(t => t.assignee === "张三").length} 件，别堆太多</p>
+        <div className="flex items-center gap-2">
+          {businessFilter && (
+            <Button variant="ghost" size="icon-sm" onClick={() => router.back()} aria-label="返回"><ArrowLeft className="size-4" /></Button>
+          )}
+          <div>
+            <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>
+              {businessFilter ? `${businessFilter} · 任务` : "任务看板"}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">张三手上有 {taskList.filter(t => t.assignee === "张三").length} 件，别堆太多</p>
+          </div>
         </div>
         <Button size="sm" onClick={() => setShowNewForm((v) => !v)}><Plus className="size-3.5" aria-hidden="true" />{showNewForm ? "取消" : "新建任务"}</Button>
       </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Upload, Download, FileText } from "lucide-react";
+import { Search, Upload, Download, FileText, ArrowLeft } from "lucide-react";
 import { documents } from "@/mock/documents";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const statusLabel: Record<string, string> = {
 
 export default function DocumentsPage() {
   const [search, setSearch] = useState("");
+  const router = useRouter();
   const [businessFilter, setBusinessFilter] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,11 +51,16 @@ export default function DocumentsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>
-            {businessFilter ? `${businessFilter} · 文档` : "文档管理"}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">合同、资质、报告都在这儿，别弄丢了</p>
+        <div className="flex items-center gap-2">
+          {businessFilter && (
+            <Button variant="ghost" size="icon-sm" onClick={() => router.back()} aria-label="返回"><ArrowLeft className="size-4" /></Button>
+          )}
+          <div>
+            <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>
+              {businessFilter ? `${businessFilter} · 文档` : "文档管理"}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">合同、资质、报告都在这儿，别弄丢了</p>
+          </div>
         </div>
         <Button size="sm" onClick={() => console.log("上传文档")}><Upload className="size-3.5" aria-hidden="true" />上传文档</Button>
       </div>
