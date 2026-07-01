@@ -61,7 +61,8 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      {/* Row 1: Title + new order button */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>订单管理</h1>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">{loading ? "加载中..." : `一共 ${orders.length} 条，搜一下更快`}</p>
@@ -71,11 +72,14 @@ export default function OrdersPage() {
         </Link>
       </div>
 
+      {/* Row 2: Search bar — full width */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+        <Input placeholder="输入订单号或客户名称快速搜索..." aria-label="搜索订单" value={search} onChange={(e) => setSearch(e.target.value)} className="h-10 pl-9 text-sm focus-visible:ring-2 focus-visible:ring-[var(--ring)]" />
+      </div>
+
+      {/* Row 3: Status + business filter + sort */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--muted-foreground)]" />
-          <Input placeholder="搜索订单号、客户…" aria-label="搜索订单" value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 pl-8 text-sm" />
-        </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="按状态筛选" className="h-9 rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--ring)] focus:ring-2 focus:ring-[var(--ring)]/20">
           <option value="all">全部状态</option>
           <option value="待处理">待处理</option>
