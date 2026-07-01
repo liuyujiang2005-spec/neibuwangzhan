@@ -452,6 +452,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                       {f.description && <p className="mt-0.5 text-xs text-[var(--foreground)]">{f.description}</p>}
                       {(f.payment_method || f.slip_number) && <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]">{f.payment_method || ""}{f.payment_method && f.slip_number && " · "}{f.slip_number ? "流水号 " + f.slip_number : ""}</p>}
+                      {f.slip_file && <p className="mt-0.5"><a href={f.slip_file} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看水单</a></p>}
                     </li>
                   ))}
                 </ul>
@@ -497,7 +498,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     {clientDocs.map((doc) => (
                       <li key={doc.id} className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-[var(--secondary)]">
                         <FileText className="size-3.5 shrink-0 text-[var(--muted-foreground)]" />
-                        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-[var(--foreground)]">{doc.file_url ? <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-[var(--primary)] hover:underline">{doc.name}</a> : doc.name}</p>
+                        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-[var(--foreground)]">{doc.name}{doc.file_url && <> <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看文件</a></>}</p>
                           <span className={cn("text-xs", doc.status === "已审核" ? "text-[var(--success)]" : "text-[var(--warning)]")}>{doc.status}</span></div>
                       </li>
                     ))}
@@ -554,7 +555,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         ) : (
                           <>
                             <div className="flex items-center justify-between">
-                              <p className="text-xs font-medium text-[var(--foreground)]">{cert.certificate_number}{cert.file_url && <> <a href={cert.file_url} target="_blank" rel="noopener noreferrer" className="text-[0.6rem] text-[var(--primary)] hover:underline">查看</a></>}</p>
+                              <p className="text-xs font-medium text-[var(--foreground)]">{cert.certificate_number}</p>
+                            {cert.file_url && <p className="mt-0.5"><a href={cert.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--primary)] hover:bg-[var(--muted)] transition-colors">查看证书文件</a></p>}
                               <div className="flex items-center gap-1.5">
                                 <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-medium", dynStatus === "expiring" ? "bg-[color-mix(in_oklch,var(--warning),var(--background)_85%)] text-[var(--warning)]" : dynStatus === "expired" ? "bg-[color-mix(in_oklch,var(--destructive),var(--background)_92%)] text-[var(--destructive)]" : "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]")}>{dynStatus === "expiring" ? "即将到期" : dynStatus === "expired" ? "已过期" : "有效"}</span>
                                 <button onClick={() => { if (isClient) return; setEditingCertId(cert.id); setEditCertFields({ certificate_number: cert.certificate_number, product_name: cert.product_name, issue_date: cert.issue_date, expiry_date: cert.expiry_date, nsw_registration: cert.nsw_registration, nsw_download_status: cert.nsw_download_status, notes: cert.notes, status: cert.status, file_url: cert.file_url }); setCertFileName(""); setCertFileUrl(""); }} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="编辑证书"><Pencil className="size-3" /></button>
