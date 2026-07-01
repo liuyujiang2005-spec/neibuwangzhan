@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, TrendingUp, DollarSign } from "lucide-react";
+import { Plus, TrendingUp, DollarSign, ArrowLeft, FileText, ClipboardList } from "lucide-react";
 import { fetchOrders } from "@/lib/api";
 import { statusClass, statusLabels } from "@/lib/api";
 import type { Order } from "@/lib/api";
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function FdaSubServicePage({ title, description, subServiceType }: Props) {
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const pricing = servicePrices[subServiceType];
@@ -42,9 +44,12 @@ export function FdaSubServicePage({ title, description, subServiceType }: Props)
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>{title}</h1>
-        <p className="mt-1.5 text-sm text-[var(--muted-foreground)] leading-relaxed">{description}</p>
+      <div className="flex items-center gap-2">
+        <button onClick={() => router.back()} className="shrink-0 rounded-md p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" aria-label="返回"><ArrowLeft className="size-4" /></button>
+        <div>
+          <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>{title}</h1>
+          <p className="mt-1.5 text-sm text-[var(--muted-foreground)] leading-relaxed">{description}</p>
+        </div>
       </div>
 
       {/* Stats + Pricing */}
@@ -106,7 +111,11 @@ export function FdaSubServicePage({ title, description, subServiceType }: Props)
         {orders.length === 0 && <div className="py-12 text-center text-sm text-[var(--muted-foreground)]">暂无{title}订单</div>}
       </div>
 
-      <Link href="/orders/new" className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 text-sm font-medium text-[var(--primary-foreground)]"><Plus className="size-3.5" />新建{title}订单</Link>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/orders/new?biz=FDA认证" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 text-sm font-medium text-[var(--primary-foreground)] transition-all hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_15%)]"><Plus className="size-3.5" aria-hidden="true" />新建{title}订单</Link>
+        <Link href="/documents?biz=FDA认证" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm font-medium text-[var(--foreground)] transition-all hover:bg-[var(--muted)]"><FileText className="size-3.5" aria-hidden="true" />去看文档</Link>
+        <Link href="/tasks?biz=FDA认证" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm font-medium text-[var(--foreground)] transition-all hover:bg-[var(--muted)]"><ClipboardList className="size-3.5" aria-hidden="true" />看看任务</Link>
+      </div>
     </div>
   );
 }
