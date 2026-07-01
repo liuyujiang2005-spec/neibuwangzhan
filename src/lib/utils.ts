@@ -8,11 +8,14 @@ export function cn(...inputs: ClassValue[]) {
 export function toThaiTime(utcStr: string | null | undefined): string {
   if (!utcStr) return "";
   const d = new Date(utcStr);
-  const thai = new Date(d.getTime() + 7 * 60 * 60 * 1000);
-  const y = thai.getUTCFullYear();
-  const m = String(thai.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(thai.getUTCDate()).padStart(2, "0");
-  const h = String(thai.getUTCHours()).padStart(2, "0");
-  const min = String(thai.getUTCMinutes()).padStart(2, "0");
-  return `${y}-${m}-${day} ${h}:${min}`;
+  const fmt = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return fmt.format(d).replace(/\//g, "-").replace(", ", " ");
 }
