@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Plus, FileText, ClipboardList } from "lucide-react";
+import { Plus, FileText, ClipboardList, Search } from "lucide-react";
 import { fetchOrders, fetchBusinessTypes } from "@/lib/api";
 import { statusClass, statusLabels } from "@/lib/api";
 import type { Order, BusinessType } from "@/lib/api";
@@ -23,6 +23,7 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
   const [orders, setOrders] = useState<Order[]>([]);
   const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -51,6 +52,13 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
     const totalAmount = orders.reduce((sum, o) => sum + o.total_amount, 0);
     return { total, inProgress, completed, pending, totalAmount };
   }, [orders]);
+
+  const filteredOrders = search
+    ? orders.filter((o) =>
+        o.id.toLowerCase().includes(search.toLowerCase()) ||
+        o.customer_name.toLowerCase().includes(search.toLowerCase())
+      )
+    : orders;
 
   const a = accentStyles(accentHue);
 
@@ -94,6 +102,10 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-[var(--foreground)]">{stats.total > 0 ? `共 ${stats.total} 条订单` : "还没有订单"}</h2>
         </div>
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[var(--muted-foreground)]" />
+          <input placeholder="搜索订单号或客户名称..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 w-full rounded-md border border-[var(--border)] bg-[var(--background)] pl-8 pr-3 text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] focus:border-[var(--ring)] focus:ring-2 focus:ring-[var(--ring)]/20" />
+        </div>
         <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--background)]">
           <table className="w-full text-sm">
             <thead>
@@ -107,7 +119,7 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
               </tr>
             </thead>
             <tbody>
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <tr key={order.id} className="border-b border-[var(--border)] transition-colors hover:bg-[var(--secondary)]">
                   <td className="py-3 px-4">
                     <Link href={`/orders/${order.id}`} className="font-mono text-xs font-medium text-[var(--accent-foreground)] hover:underline tabular-nums">{order.id}</Link>
@@ -122,7 +134,7 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
             </tbody>
           </table>
         </div>
-        {orders.length === 0 && <div className="py-16 text-center"><p className="text-sm text-[var(--muted-foreground)]">还没有{label}订单，去看看吧</p></div>}
+        {filteredOrders.length === 0 && <div className="py-16 text-center"><p className="text-sm text-[var(--muted-foreground)]">{search ? "没有匹配的订单" : `还没有${label}订单，去看看吧`}</p></div>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-sm">
