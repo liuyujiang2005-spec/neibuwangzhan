@@ -25,8 +25,17 @@ interface StepTemplate {
 
 const businessSteps: Record<number, StepTemplate[]> = {
   1: [
-    { name: "公司注册 — 初始步骤", assignee: "Bam" },
-    { name: "完成", assignee: "" },
+    { name: "Bam收集客户信息（公司名称中英文+股东护照+注册地址+营业范围），整理到飞书发给Pop", assignee: "Bam" },
+    { name: "Bam帮客户注册DBD eBiz账号（需客户泰国邮箱+电话），发QR码给客户验证身份", assignee: "Bam" },
+    { name: "客户身份验证（1-2天），通过后Pop登录DBD eBiz办理公司注册", assignee: "Pop" },
+    { name: "验证不通过则Eve代为签字担保注册（耗时比正常更长）", assignee: "Eve" },
+    { name: "DBD审核通过，制作公司印章（2-3天）", assignee: "Pop" },
+    { name: "VAT注册：Pop准备文件，Fern前往税务局办理", assignee: "Fern" },
+    { name: "银行开户：Eve预审预约，通知客户来泰，Bam/Pop陪同", assignee: "Eve" },
+    { name: "地址服务：Pop联系房东、签合同、付款", assignee: "Pop" },
+    { name: "做账报税：Eve每月整理账目（当前零申报，等待老板安排改正常报税）", assignee: "Eve" },
+    { name: "公司变更：Pop接需求，Eve协助办理", assignee: "Pop" },
+    { name: "全套文件交付客户", assignee: "Bam" },
   ],
   2: [
     { name: "确认商标名称", assignee: "Ing" },
@@ -106,44 +115,7 @@ const businessSteps: Record<number, StepTemplate[]> = {
   ],
 };
 
-export function getBusinessSteps(businessTypeId: number, subServiceType?: string): StepTemplate[] {
-  // Company registration sub-services
-  if (subServiceType === "company-reg") return [
-    { name: "Bam收集客户信息（公司名称中英文+股东护照+注册地址+营业范围），整理到飞书发给Pop", assignee: "Bam" },
-    { name: "Bam帮客户注册DBD eBiz账号（需客户泰国邮箱+电话），发QR码给客户验证身份", assignee: "Bam" },
-    { name: "客户身份验证（1-2天），通过后Pop登录DBD eBiz办理公司注册", assignee: "Pop" },
-    { name: "验证不通过则Eve代为签字担保注册（耗时比正常更长）", assignee: "Eve" },
-    { name: "DBD审核通过，制作公司印章（2-3天）", assignee: "Pop" },
-    { name: "全套公司文件交付客户", assignee: "Bam" },
-  ];
-  if (subServiceType === "vat") return [
-    { name: "Pop准备VAT注册文件（公司证书+股东护照+租赁合同+PP20）", assignee: "Pop" },
-    { name: "Fern前往税务局办理（曼谷），若Fern在清迈则由Pop/Piang代办", assignee: "Fern" },
-    { name: "文件有误需回来修改再跑一趟，单次交通成本约1000泰铢", assignee: "Fern" },
-    { name: "文件无误当天完成VAT注册", assignee: "Fern" },
-  ];
-  if (subServiceType === "bank") return [
-    { name: "Eve准备开户文件提交银行预审，预约1-2周后时间", assignee: "Eve" },
-    { name: "银行预审通过，通知客户来泰国", assignee: "Eve" },
-    { name: "Bam或Pop陪同客户前往银行，协调开户手续", assignee: "Bam" },
-    { name: "开户完成，交付银行资料给客户", assignee: "Bam" },
-    { name: "注意：公司必须有1名泰籍股东，银行会审查股东背景", assignee: "" },
-  ];
-  if (subServiceType === "address") return [
-    { name: "老板确定地址（Hong Tower或其它），Pop联系房东", assignee: "Pop" },
-    { name: "Pop与房东签合同、付款、索取房东证件和地址文件", assignee: "Pop" },
-    { name: "年租金管理", assignee: "" },
-  ];
-  if (subServiceType === "accounting") return [
-    { name: "Eve每月整理账目", assignee: "Eve" },
-    { name: "当前为零申报，老板要求改为正常每月报税（等待老板安排）", assignee: "Eve" },
-  ];
-  if (subServiceType === "change") return [
-    { name: "Pop接收客户变更需求（改董事/改地址/增资等）", assignee: "Pop" },
-    { name: "Eve协助办理文件，Pop有时也亲自操作 — 分工暂未明确", assignee: "Eve" },
-    { name: "完成变更，更新全套文件交付客户", assignee: "Pop" },
-  ];
-  if (subServiceType === "international") return [
+export function getBusinessSteps(businessTypeId: number, subServiceType?: string): StepTemplate[] {  if (subServiceType === "international") return [
     { name: "客户沟通确认需求", assignee: "Ing" },
     { name: "查重（检查维普/各国商标库）", assignee: "Ing" },
     { name: "分类确认（与泰国TM标一致）", assignee: "Ing" },
@@ -381,7 +353,7 @@ function seedData(database: Database.Database) {
     );
 
     const mockOrders = [
-      { id: "ORD-001", customer: "华夏科技有限公司", bt: 1, status: "进行中", person: "Bam", desc: "有限责任公司注册，注册资本500万", amount: 35000, ss: "company-reg" },
+      { id: "ORD-001", customer: "华夏科技有限公司", bt: 1, status: "进行中", person: "Bam", desc: "有限责任公司注册，注册资本500万", amount: 35000, ss: "" },
       { id: "ORD-002", customer: "创新品牌管理有限公司", bt: 2, status: "进行中", person: "Fern", desc: "第35类、第42类商标申请", amount: 8500, ss: "" },
       { id: "ORD-003", customer: "康健医疗设备有限公司", bt: 3, status: "待处理", person: "Ing", desc: "化妆品FDA认证", amount: 125000, ss: "cosmetics" },
       { id: "ORD-004", customer: "东南亚贸易有限公司", bt: 4, status: "进行中", person: "Pop", desc: "电子产品TISI认证", amount: 28000, ss: "" },
