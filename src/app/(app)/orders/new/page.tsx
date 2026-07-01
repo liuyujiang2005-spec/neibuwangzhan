@@ -28,6 +28,16 @@ export default function NewOrderPage() {
     fetchEmployees().then(setEmployees).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (businessTypes.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const bizName = params.get("biz");
+    if (bizName) {
+      const bt = businessTypes.find(t => t.name === bizName);
+      if (bt) setForm(prev => ({ ...prev, business_type_id: String(bt.id) }));
+    }
+  }, [businessTypes]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };

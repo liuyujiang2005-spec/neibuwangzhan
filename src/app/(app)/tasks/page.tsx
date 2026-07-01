@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { tasks, statusColumns, type TaskStatus } from "@/mock/tasks";
@@ -30,11 +30,9 @@ export default function TasksPage() {
   const [businessFilter, setBusinessFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("currentBusinessFilter");
-    if (stored) {
-      setBusinessFilter(stored);
-      localStorage.removeItem("currentBusinessFilter");
-    }
+    const params = new URLSearchParams(window.location.search);
+    const biz = params.get("biz");
+    if (biz) setBusinessFilter(biz);
   }, []);
   const [taskList, setTaskList] = useState<Task[]>(tasks);
   const [showNewForm, setShowNewForm] = useState(false);

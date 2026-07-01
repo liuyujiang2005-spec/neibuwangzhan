@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Upload, Download, FileText } from "lucide-react";
@@ -24,11 +24,9 @@ export default function DocumentsPage() {
   const [businessFilter, setBusinessFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("currentBusinessFilter");
-    if (stored) {
-      setBusinessFilter(stored);
-      localStorage.removeItem("currentBusinessFilter");
-    }
+    const params = new URLSearchParams(window.location.search);
+    const biz = params.get("biz");
+    if (biz) setBusinessFilter(biz);
   }, []);
 
   const filtered = useMemo(() => {
