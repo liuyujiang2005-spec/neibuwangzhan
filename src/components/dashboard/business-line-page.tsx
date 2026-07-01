@@ -6,7 +6,7 @@ import { Plus, FileText, ClipboardList, Search } from "lucide-react";
 import { fetchOrders, fetchBusinessTypes } from "@/lib/api";
 import { statusClass, statusLabels } from "@/lib/api";
 import type { Order, BusinessType } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, toThaiTime } from "@/lib/utils";
 
 interface BusinessLinePageProps {
   businessKey: string;
@@ -127,7 +127,7 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
                   <td className="py-3 px-4 max-md:hidden"><div className="font-medium text-[var(--foreground)]">{order.customer_name}</div></td>
                   <td className="py-3 px-4 max-md:hidden text-[var(--foreground)]">{order.responsible_person}</td>
                   <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-[var(--foreground)]">¥{order.total_amount.toLocaleString()}</td>
-                  <td className="py-3 px-4 font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{order.created_at?.slice(0, 10)}</td>
+                  <td className="py-3 px-4 font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{toThaiTime(order.created_at)}</td>
                   <td className="py-3 px-4"><span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium", statusClass[order.status])}>{statusLabels[order.status]}</span></td>
                 </tr>
               ))}

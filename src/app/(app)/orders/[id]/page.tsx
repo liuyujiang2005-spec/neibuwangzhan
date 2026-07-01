@@ -9,7 +9,7 @@ import { fetchOrder, updateStep, fetchDocuments, fetchFinances, uploadDocument, 
 import { statusClass, statusLabels } from "@/lib/api";
 import type { Order, OrderStep, Document, Finance, StepNote, StepDocument, Certificate } from "@/lib/api";
 import { getStepTimes, getStepDocs } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, toThaiTime } from "@/lib/utils";
 
 const stepStatusClass: Record<string, string> = {
   "待处理": "bg-[color-mix(in_oklch,var(--warning),var(--background)_85%)] text-[oklch(0.40_0.14_85)]",
@@ -193,7 +193,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <div><dt className="text-xs text-[var(--muted-foreground)]">客户</dt><dd className="mt-1 text-sm text-[var(--foreground)]">{order.customer_name}</dd></div>
               <div><dt className="text-xs text-[var(--muted-foreground)]">负责人</dt><dd className="mt-1 text-sm text-[var(--foreground)]">{order.responsible_person || "—"}</dd></div>
               <div><dt className="text-xs text-[var(--muted-foreground)]">金额</dt><dd className="mt-1 text-sm font-mono text-[var(--foreground)]">¥{order.total_amount.toLocaleString()}</dd></div>
-              <div><dt className="text-xs text-[var(--muted-foreground)]">创建日期</dt><dd className="mt-1 text-sm text-[var(--foreground)]">{order.created_at?.slice(0, 10)}</dd></div>
+              <div><dt className="text-xs text-[var(--muted-foreground)]">创建日期</dt><dd className="mt-1 text-sm text-[var(--foreground)]">{toThaiTime(order.created_at)}</dd></div>
               <div className="sm:col-span-2"><dt className="text-xs text-[var(--muted-foreground)]">描述</dt><dd className="mt-1 text-sm text-[var(--foreground)]">{order.description || "—"}</dd></div>
             </dl>
           </div>
@@ -345,7 +345,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           </div>
                         )}
                         {step.status === "已完成" && step.completed_at && (
-                          <p className="mt-1 text-xs text-[var(--muted-foreground)]">完成于 {step.completed_at.slice(0, 16).replace("T", " ")}</p>
+                          <p className="mt-1 text-xs text-[var(--muted-foreground)]">完成于 {toThaiTime(step.completed_at)}</p>
                         )}
 
                         {/* Expand/collapse for notes + docs */}
@@ -367,7 +367,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                   {notes.map((n) => (
                                     <li key={n.id} className="rounded bg-[var(--muted)] px-2.5 py-1.5 text-xs text-[var(--foreground)]">
                                       <p>{n.content}</p>
-                                      <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]">{n.created_by} · {n.created_at?.slice(0, 16)}</p>
+                                      <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]">{n.created_by} · {toThaiTime(n.created_at)}</p>
                                     </li>
                                   ))}
                                 </ul>
