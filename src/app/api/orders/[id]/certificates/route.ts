@@ -27,3 +27,41 @@ export async function POST(
   const cert = db.prepare("SELECT * FROM certificates WHERE id = ?").get(result.lastInsertRowid);
   return NextResponse.json(cert, { status: 201 });
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const db = getDb();
+  const body = await req.json();
+  const { cert_id, certificate_number, product_name, issue_date, expiry_date, status, nsw_registration, nsw_download_status, notes } = body;
+  if (!cert_id) return NextResponse.json({ error: "缺少 cert_id" }, { status: 400 });
+
+  const fields: string[] = [];
+  const values: any[] = [];
+  if (certificate_number !== undefined) { fields.push("certificate_number = ?"); values.push(certificate_number); }
+  if (product_name !== undefined) { fields.push("product_name = ?"); values.push(product_name); }
+  if (issue_date !== undefined) { fields.push("issue_date = ?"); values.push(issue_date); }
+  if (expiry_date !== undefined) { fields.push("expiry_date = ?"); values.push(expiry_date); }
+  if (nsw_registration !== undefined) { fields.push("nsw_registration = ?"); values.push(nsw_registration); }
+  if (nsw_download_status !== undefined) { fields.push("nsw_download_status = ?"); values.push(nsw_download_status); }
+  if (notes !== undefined) { fields.push("notes = ?"); values.push(notes); }
+
+  // Auto-calculate status based on expiry_date (unless explicitly provided)
+  if (status !== undefined) {
+    fields.push("status = ?"); values.push(status);
+  } else if (expiry_date) {
+    const expDate = new Date(expiry_date);
+    const now = new Date();
+    const diffDays = Math.floor((expDate.getTime() - now.getTime()) / 86400000);
+    const calcStatus = diffDays < 0 ? "expired" : diffDays <= 30 ? "expiring" : "valid";
+    fields.push("status = ?"); values.push(calcStatus);
+  }
+
+  if (fields.length === 0) return NextResponse.json({ error: "无更新字段" }, { status: 400 });
+  values.push(cert_id);
+  db.prepare(`UPDATE certificates SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+  const cert = db.prepare("SELECT * FROM certificates WHERE id = ?").get(cert_id);
+  return NextResponse.json(cert);
+}

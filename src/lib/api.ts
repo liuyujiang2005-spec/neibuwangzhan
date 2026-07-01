@@ -245,6 +245,16 @@ export async function addCertificate(orderId: string, data: { certificate_number
   return res.json() as Promise<Certificate>;
 }
 
+export async function updateCertificate(orderId: string, certId: number, data: Partial<Certificate>) {
+  const res = await fetch(`/api/orders/${orderId}/certificates`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cert_id: certId, ...data }),
+  });
+  if (!res.ok) throw new Error("更新证书失败");
+  return res.json();
+}
+
 // ----- 前端状态映射 -----
 
 export const statusLabels: Record<string, string> = {
