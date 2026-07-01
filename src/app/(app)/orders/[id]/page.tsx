@@ -324,8 +324,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                             ) : (
                               <>
                                 {(() => {
+                                  const isCompanyReg = order?.business_type_id === 1;
                                   const prevStep = steps.find(s => s.step_order === step.step_order - 1);
-                                  const canComplete = !prevStep || prevStep.status === "已完成";
+                                  const canComplete = isCompanyReg || !prevStep || prevStep.status === "已完成";
                                   return canComplete ? (
                                     <button onClick={() => setConfirmingStepId(step.id)} className="rounded border border-[color-mix(in_oklch,var(--success),var(--background)_70%)] bg-[color-mix(in_oklch,var(--success),var(--background)_92%)] px-2 py-1 text-xs text-[var(--success)] hover:bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] transition-colors">标记完成</button>
                                   ) : (
