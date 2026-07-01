@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { Plus, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { tasks, statusColumns, type TaskStatus } from "@/mock/tasks";
-import type { Task } from "@/mock/tasks";
+import { fetchTasks, createTask as apiCreateTask, updateTaskStatus } from "@/lib/api";
+import type { Task } from "@/lib/api";
+
+const statusColumns = [
+  { key: "pending" as const, label: "待处理" },
+  { key: "in_progress" as const, label: "进行中" },
+  { key: "completed" as const, label: "已完成" },
+];
 import { cn } from "@/lib/utils";
 
 const priorityDot: Record<Task["priority"], string> = {
@@ -13,19 +20,20 @@ const priorityDot: Record<Task["priority"], string> = {
   high: "bg-[var(--destructive)]",
 };
 
-const columnTitles: Record<TaskStatus, string> = {
+const columnTitles: Record<string, string> = {
   pending: "待处理",
   in_progress: "进行中",
   completed: "已完成",
 };
 
-const columnBg: Record<TaskStatus, string> = {
+const columnBg: Record<string, string> = {
   pending: "bg-[color-mix(in_oklch,var(--warning),var(--background)_95%)]",
   in_progress: "bg-[color-mix(in_oklch,var(--info),var(--background)_95%)]",
   completed: "bg-[color-mix(in_oklch,var(--success),var(--background)_95%)]",
 };
 
 export default function TasksPage() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
   const [businessFilter, setBusinessFilter] = useState<string | null>(null);
 
@@ -34,7 +42,22 @@ export default function TasksPage() {
     const biz = params.get("biz");
     if (biz) setBusinessFilter(biz);
   }, []);
-  const [taskList, setTaskList] = useState<Task[]>(tasks);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await fetchTasks(businessFilter ? { business: businessFilter } : undefined);
+        setTaskList(data);
+      } catch (err) {
+        console.error("Tasks load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [businessFilter]);
+  const [taskList, setTaskList] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
@@ -44,9 +67,9 @@ export default function TasksPage() {
   const grouped = useMemo(() => {
     let sourceList = taskList;
     if (businessFilter) {
-      sourceList = sourceList.filter((t) => t.businessLine === businessFilter);
+      sourceList = sourceList.filter((t) => t.business_line === businessFilter);
     }
-    const result: Record<TaskStatus, Task[]> = { pending: [], in_progress: [], completed: [] };
+    const result: Record<string, Task[]> = { pending: [], in_progress: [], completed: [] };
     for (const task of sourceList) {
       if (filter !== "all" && task.assignee !== filter) continue;
       result[task.status].push(task);
@@ -55,7 +78,7 @@ export default function TasksPage() {
   }, [filter, businessFilter, taskList]);
 
   const assignees = useMemo(() => [...new Set(taskList.map((t) => t.assignee))], [taskList]);
-  const businessLines = useMemo(() => [...new Set(tasks.map((t) => t.businessLine))], []);
+  const businessLines = useMemo(() => [...new Set(taskList.map((t) => t.business_line))], [taskList]);
 
   const handleAddTask = () => {
     if (!newTaskTitle.trim() || !newTaskAssignee) return;
@@ -69,7 +92,9 @@ export default function TasksPage() {
       businessLine: businessFilter || newTaskBusinessLine,
       deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     };
-    setTaskList((prev) => [...prev, newTask]);
+    apiCreateTask(newTask).then(() => {
+      setTaskList((prev) => [...prev, newTask]);
+    });
     setShowNewForm(false);
     setNewTaskTitle("");
     setNewTaskAssignee("");
@@ -88,7 +113,7 @@ export default function TasksPage() {
             <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>
               {businessFilter ? `${businessFilter} · 任务` : "任务看板"}
             </h1>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">张三手上有 {taskList.filter(t => t.assignee === "张三").length} 件，别堆太多</p>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">{user?.name || "用户"}手上有 {taskList.filter(t => t.assignee === (user?.name || "张三")).length} 件，别堆太多</p>
           </div>
         </div>
         <Button size="sm" onClick={() => setShowNewForm((v) => !v)}><Plus className="size-3.5" aria-hidden="true" />{showNewForm ? "取消" : "新建任务"}</Button>
@@ -181,7 +206,7 @@ export default function TasksPage() {
                       <p className="mt-1 text-xs text-[var(--muted-foreground)] line-clamp-2">{task.description}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-md bg-[var(--secondary)] px-1.5 py-0.5 text-xs text-[var(--secondary-foreground)]">{task.businessLine}</span>
+                      <span className="rounded-md bg-[var(--secondary)] px-1.5 py-0.5 text-xs text-[var(--secondary-foreground)]">{task.business_line}</span>
                       {task.status === 'completed' && (
                         <span className="inline-flex size-4 items-center justify-center rounded-full bg-[var(--success)] text-[0.625rem] text-[var(--success-foreground)]">✓</span>
                       )}

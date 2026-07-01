@@ -22,6 +22,7 @@ function ChartSkeleton() {
 }
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [stats, setStats] = useState({ total_orders: 0, in_progress: 0, completed: 0, today_todos: 0 });
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,7 @@ export default function DashboardPage() {
           仪表盘
         </h1>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          {loading ? "正在加载..." : `早上好，张三。今天有 ${stats.today_todos} 件事等着你。`}
+          {loading ? "正在加载..." : `早上好，${user?.name || "用户"}。今天有 ${stats.today_todos} 件事等着你。`}
         </p>
       </div>
 

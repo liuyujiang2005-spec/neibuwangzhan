@@ -21,8 +21,23 @@ const statusClass: Record<string, string> = {
 };
 
 export default function FinancePage() {
-  const [search, setSearch] = useState("");
+  const [allFinances, setAllFinances] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("all");
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await fetchAllFinances();
+        setAllFinances(data);
+      } catch (err) {
+        console.error("Finances load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...financeRecords];

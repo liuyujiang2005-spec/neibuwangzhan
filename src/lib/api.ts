@@ -155,6 +155,16 @@ export async function fetchEmployees() {
   return res.json() as Promise<Employee[]>;
 }
 
+export async function createEmployee(data: { name: string; email: string; role?: string; password?: string }) {
+  const res = await fetch("/api/employees", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("创建员工失败");
+  return res.json();
+}
+
 export async function updateStep(orderId: string, stepId: number, data: { status: string; notes?: string; assignee?: string; approval_status?: string; submission_count?: number }) {
   const res = await fetch(`/api/orders/${orderId}/steps`, {
     method: "PATCH",
@@ -276,3 +286,72 @@ export const statusClass: Record<string, string> = {
   "已完成": "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[oklch(0.38_0.14_155)]",
   "已逾期": "bg-[color-mix(in_oklch,var(--destructive),var(--background)_92%)] text-[oklch(0.35_0.18_25)]",
 };
+
+
+export async function fetchTasks(params?: { business?: string }) {
+  const searchParams = new URLSearchParams();
+  if (params?.business) searchParams.set("business", params.business);
+  const query = searchParams.toString();
+  const res = await fetch(`/api/tasks\${query ? "?" + query : ""}`);
+  if (!res.ok) throw new Error("获取任务失败");
+  return res.json();
+}
+
+export async function createTask(data: { title: string; assignee?: string; priority?: string; business_line?: string; deadline?: string }) {
+  const res = await fetch("/api/tasks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("创建任务失败");
+  return res.json();
+}
+
+export async function updateTaskStatus(id: string, status: string) {
+  const res = await fetch("/api/tasks", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, status }),
+  });
+  if (!res.ok) throw new Error("更新任务失败");
+  return res.json();
+}
+
+export async function fetchAllDocuments(params?: { business?: string }) {
+  const searchParams = new URLSearchParams();
+  if (params?.business) searchParams.set("business", params.business);
+  const query = searchParams.toString();
+  const res = await fetch(`/api/documents\${query ? "?" + query : ""}`);
+  if (!res.ok) throw new Error("获取文档失败");
+  return res.json();
+}
+
+export async function fetchAllFinances(params?: { type?: string; status?: string }) {
+  const searchParams = new URLSearchParams();
+  if (params?.type) searchParams.set("type", params.type);
+  if (params?.status) searchParams.set("status", params.status);
+  const query = searchParams.toString();
+  const res = await fetch(`/api/finances\${query ? "?" + query : ""}`);
+  if (!res.ok) throw new Error("获取费用失败");
+  return res.json();
+}
+
+export async function updateEmployee(id: number, data: { name?: string; email?: string; role?: string; password?: string }) {
+  const res = await fetch("/api/employees", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...data }),
+  });
+  if (!res.ok) throw new Error("更新员工失败");
+  return res.json();
+}
+
+export async function deleteEmployee(id: number) {
+  const res = await fetch("/api/employees", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) throw new Error("删除员工失败");
+  return res.json();
+}

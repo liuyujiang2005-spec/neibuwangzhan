@@ -314,6 +314,21 @@ function initTables(database: Database.Database) {
     );
   `);
 
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      assignee TEXT DEFAULT '',
+      priority TEXT DEFAULT 'medium' CHECK(priority IN ('low','medium','high')),
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_progress','completed')),
+      business_line TEXT DEFAULT '',
+      deadline TEXT DEFAULT '',
+      order_id TEXT REFERENCES orders(id),
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
   // Migrations for existing databases
   try { database.exec("ALTER TABLE finances ADD COLUMN payment_method TEXT DEFAULT ''"); } catch {}
   try { database.exec("ALTER TABLE finances ADD COLUMN slip_number TEXT DEFAULT ''"); } catch {}

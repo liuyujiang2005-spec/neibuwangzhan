@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Upload, Download, FileText, ArrowLeft } from "lucide-react";
-import { documents } from "@/mock/documents";
+import { fetchAllDocuments } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const statusClass: Record<string, string> = {
@@ -23,7 +23,8 @@ const statusLabel: Record<string, string> = {
 export default function DocumentsPage() {
   const [search, setSearch] = useState("");
   const router = useRouter();
-  const [businessFilter, setBusinessFilter] = useState<string | null>(null);
+  const [allDocs, setAllDocs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -31,18 +32,32 @@ export default function DocumentsPage() {
     if (biz) setBusinessFilter(biz);
   }, []);
 
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await fetchAllDocuments();
+        setAllDocs(data);
+      } catch (err) {
+        console.error("Docs load error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
   const filtered = useMemo(() => {
-    let result = documents;
+    let result = allDocs;
     if (businessFilter) {
-      result = result.filter((d) => d.businessLine === businessFilter);
+      result = result.filter((d) => d.business_line === businessFilter);
     }
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(
         (d) =>
           d.name.toLowerCase().includes(s) ||
-          d.businessLine.toLowerCase().includes(s) ||
-          d.uploadBy.toLowerCase().includes(s)
+          d.business_line && d.business_line.toLowerCase().includes(s) ||
+          (d.uploaded_by || d.uploadBy || "").toLowerCase().includes(s)
       );
     }
     return result;
@@ -99,11 +114,11 @@ export default function DocumentsPage() {
                     <span className="truncate font-medium text-[var(--foreground)]">{doc.name}</span>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.type}</td>
-                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.businessLine}</td>
-                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.uploadBy}</td>
-                <td className="py-3 px-4 font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{doc.uploadDate}</td>
-                <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{doc.size}</td>
+                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.file_type || doc.type || ""}</td>
+                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.business_line || doc.businessLine || ""}</td>
+                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.uploaded_by || doc.uploadBy || ""}</td>
+                <td className="py-3 px-4 font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{doc.created_at?.slice(0, 10) || doc.uploadDate || ""}</td>
+                <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{doc.size || ""}</td>
                 <td className="py-3 px-4">
                   <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium", statusClass[doc.status])}>
                     {statusLabel[doc.status]}
