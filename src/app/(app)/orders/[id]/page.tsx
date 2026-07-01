@@ -114,7 +114,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-sm text-[var(--muted-foreground)]">{error}</p>
-        <Button variant="ghost" size="sm" className="mt-4" onClick={() => router.push("/orders")}>返回订单列表</Button>
+        <Button variant="ghost" size="sm" className="mt-4" onClick={() => router.back()}>返回订单列表</Button>
       </div>
     );
   }
@@ -125,7 +125,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon-sm" onClick={() => router.push("/orders")} aria-label="返回订单列表"><ArrowLeft className="size-4" aria-hidden="true" /></Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => router.back()} aria-label="返回订单列表"><ArrowLeft className="size-4" aria-hidden="true" /></Button>
           <div>
             <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>{order.id}</h1>
             <div className="mt-1 flex items-center gap-2">
