@@ -39,6 +39,8 @@ export interface BusinessType {
 export interface Employee {
   id: number;
   name: string;
+  email?: string;
+  role?: string;
 }
 
 export interface Document {
@@ -108,18 +110,26 @@ export interface DashboardStats {
 
 // ----- API functions -----
 
+
+// ---- Auth helper ----
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("authToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function fetchOrders(params?: { business_type_id?: number; status?: string }) {
   const searchParams = new URLSearchParams();
   if (params?.business_type_id) searchParams.set("business_type_id", String(params.business_type_id));
   if (params?.status) searchParams.set("status", params.status);
   const query = searchParams.toString();
-  const res = await fetch(`/api/orders${query ? "?" + query : ""}`);
+  const res = await fetch(`/api/orders${query ? "?" + query : ""}`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取订单失败");
   return res.json() as Promise<Order[]>;
 }
 
 export async function fetchOrder(id: string) {
-  const res = await fetch(`/api/orders/${id}`);
+  const res = await fetch(`/api/orders/${id}`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取订单详情失败");
   return res.json() as Promise<Order & { steps: OrderStep[] }>;
 }
@@ -136,7 +146,7 @@ export async function createOrder(data: {
 }) {
   const res = await fetch("/api/orders", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("创建订单失败");
@@ -144,13 +154,13 @@ export async function createOrder(data: {
 }
 
 export async function fetchBusinessTypes() {
-  const res = await fetch("/api/business-types");
+  const res = await fetch("/api/business-types", { headers: authHeaders() });
   if (!res.ok) throw new Error("获取业务线失败");
   return res.json() as Promise<BusinessType[]>;
 }
 
 export async function fetchEmployees() {
-  const res = await fetch("/api/employees");
+  const res = await fetch("/api/employees", { headers: authHeaders() });
   if (!res.ok) throw new Error("获取员工列表失败");
   return res.json() as Promise<Employee[]>;
 }
@@ -158,7 +168,7 @@ export async function fetchEmployees() {
 export async function createEmployee(data: { name: string; email: string; role?: string; password?: string }) {
   const res = await fetch("/api/employees", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("创建员工失败");
@@ -168,7 +178,7 @@ export async function createEmployee(data: { name: string; email: string; role?:
 export async function updateStep(orderId: string, stepId: number, data: { status: string; notes?: string; assignee?: string; approval_status?: string; submission_count?: number }) {
   const res = await fetch(`/api/orders/${orderId}/steps`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ step_id: stepId, ...data }),
   });
   if (!res.ok) throw new Error("更新步骤失败");
@@ -176,13 +186,13 @@ export async function updateStep(orderId: string, stepId: number, data: { status
 }
 
 export async function fetchDashboardStats() {
-  const res = await fetch("/api/dashboard/stats");
+  const res = await fetch("/api/dashboard/stats", { headers: authHeaders() });
   if (!res.ok) throw new Error("获取仪表盘数据失败");
   return res.json() as Promise<DashboardStats>;
 }
 
 export async function fetchDocuments(orderId: string) {
-  const res = await fetch(`/api/orders/${orderId}/documents`);
+  const res = await fetch(`/api/orders/${orderId}/documents`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取文档失败");
   return res.json() as Promise<Document[]>;
 }
@@ -190,7 +200,7 @@ export async function fetchDocuments(orderId: string) {
 export async function uploadDocument(orderId: string, data: { name: string; file_type?: string; uploaded_by?: string; direction?: string; file_url?: string }) {
   const res = await fetch(`/api/orders/${orderId}/documents`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("上传文档失败");
@@ -198,15 +208,15 @@ export async function uploadDocument(orderId: string, data: { name: string; file
 }
 
 export async function fetchFinances(orderId: string) {
-  const res = await fetch(`/api/orders/${orderId}/finances`);
+  const res = await fetch(`/api/orders/${orderId}/finances`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取费用失败");
   return res.json() as Promise<Finance[]>;
 }
 
-export async function addFinance(orderId: string, data: { type: string; amount: number; description?: string; payment_method?: string; slip_number?: string; slip_file?: string }) {
+export async function addFinance(orderId: string, data: { type: string; amount: number; description?: string; payment_method?: string; slip_number?: string; slip_file?: string; status?: string }) {
   const res = await fetch(`/api/orders/${orderId}/finances`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("新增费用失败");
@@ -214,7 +224,7 @@ export async function addFinance(orderId: string, data: { type: string; amount: 
 }
 
 export async function fetchStepNotes(orderId: string, stepId: number) {
-  const res = await fetch(`/api/orders/${orderId}/steps/${stepId}/notes`);
+  const res = await fetch(`/api/orders/${orderId}/steps/${stepId}/notes`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取备注失败");
   return res.json() as Promise<StepNote[]>;
 }
@@ -222,7 +232,7 @@ export async function fetchStepNotes(orderId: string, stepId: number) {
 export async function addStepNote(orderId: string, stepId: number, content: string, createdBy: string) {
   const res = await fetch(`/api/orders/${orderId}/steps/${stepId}/notes`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ content, created_by: createdBy }),
   });
   if (!res.ok) throw new Error("添加备注失败");
@@ -230,7 +240,7 @@ export async function addStepNote(orderId: string, stepId: number, content: stri
 }
 
 export async function fetchStepDocuments(orderId: string, stepId: number) {
-  const res = await fetch(`/api/orders/${orderId}/steps/${stepId}/documents`);
+  const res = await fetch(`/api/orders/${orderId}/steps/${stepId}/documents`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取文档清单失败");
   return res.json() as Promise<StepDocument[]>;
 }
@@ -238,7 +248,7 @@ export async function fetchStepDocuments(orderId: string, stepId: number) {
 export async function markStepDocumentUploaded(orderId: string, stepId: number, documentId: number) {
   const res = await fetch(`/api/orders/${orderId}/steps/${stepId}/documents/mark-uploaded`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ document_id: documentId }),
   });
   if (!res.ok) throw new Error("标记上传失败");
@@ -246,7 +256,7 @@ export async function markStepDocumentUploaded(orderId: string, stepId: number, 
 }
 
 export async function fetchCertificates(orderId: string) {
-  const res = await fetch(`/api/orders/${orderId}/certificates`);
+  const res = await fetch(`/api/orders/${orderId}/certificates`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取证书失败");
   return res.json() as Promise<Certificate[]>;
 }
@@ -254,7 +264,7 @@ export async function fetchCertificates(orderId: string) {
 export async function addCertificate(orderId: string, data: { certificate_number: string; product_name?: string; issue_date?: string; expiry_date?: string; notes?: string; file_url?: string }) {
   const res = await fetch(`/api/orders/${orderId}/certificates`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("添加证书失败");
@@ -264,7 +274,7 @@ export async function addCertificate(orderId: string, data: { certificate_number
 export async function updateCertificate(orderId: string, certId: number, data: Partial<{ certificate_number?: string; product_name?: string; issue_date?: string; expiry_date?: string; status?: string; nsw_registration?: string; nsw_download_status?: string; notes?: string; file_url?: string }>) {
   const res = await fetch(`/api/orders/${orderId}/certificates`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ cert_id: certId, ...data }),
   });
   if (!res.ok) throw new Error("更新证书失败");
@@ -288,11 +298,25 @@ export const statusClass: Record<string, string> = {
 };
 
 
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  assignee?: string;
+  priority?: "low" | "medium" | "high";
+  status?: "pending" | "in_progress" | "completed";
+  business_line?: string;
+  deadline?: string;
+  order_id?: string;
+  created_at?: string;
+}
+
 export async function fetchTasks(params?: { business?: string }) {
   const searchParams = new URLSearchParams();
   if (params?.business) searchParams.set("business", params.business);
   const query = searchParams.toString();
-  const res = await fetch(`/api/tasks\${query ? "?" + query : ""}`);
+  const res = await fetch(`/api/tasks${query ? "?" + query : ""}`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取任务失败");
   return res.json();
 }
@@ -300,7 +324,7 @@ export async function fetchTasks(params?: { business?: string }) {
 export async function createTask(data: { title: string; assignee?: string; priority?: string; business_line?: string; deadline?: string }) {
   const res = await fetch("/api/tasks", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("创建任务失败");
@@ -310,7 +334,7 @@ export async function createTask(data: { title: string; assignee?: string; prior
 export async function updateTaskStatus(id: string, status: string) {
   const res = await fetch("/api/tasks", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ id, status }),
   });
   if (!res.ok) throw new Error("更新任务失败");
@@ -321,7 +345,7 @@ export async function fetchAllDocuments(params?: { business?: string }) {
   const searchParams = new URLSearchParams();
   if (params?.business) searchParams.set("business", params.business);
   const query = searchParams.toString();
-  const res = await fetch(`/api/documents\${query ? "?" + query : ""}`);
+  const res = await fetch(`/api/documents${query ? "?" + query : ""}`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取文档失败");
   return res.json();
 }
@@ -331,7 +355,7 @@ export async function fetchAllFinances(params?: { type?: string; status?: string
   if (params?.type) searchParams.set("type", params.type);
   if (params?.status) searchParams.set("status", params.status);
   const query = searchParams.toString();
-  const res = await fetch(`/api/finances\${query ? "?" + query : ""}`);
+  const res = await fetch(`/api/finances${query ? "?" + query : ""}`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取费用失败");
   return res.json();
 }
@@ -339,7 +363,7 @@ export async function fetchAllFinances(params?: { type?: string; status?: string
 export async function updateEmployee(id: number, data: { name?: string; email?: string; role?: string; password?: string }) {
   const res = await fetch("/api/employees", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ id, ...data }),
   });
   if (!res.ok) throw new Error("更新员工失败");
@@ -349,7 +373,7 @@ export async function updateEmployee(id: number, data: { name?: string; email?: 
 export async function deleteEmployee(id: number) {
   const res = await fetch("/api/employees", {
     method: "DELETE",
-    headers: { "Content-Type": "application/json" },
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ id }),
   });
   if (!res.ok) throw new Error("删除员工失败");

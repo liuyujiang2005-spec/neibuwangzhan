@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const stored = localStorage.getItem("currentUser");
+    const stored = localStorage.getItem("authToken");
     if (stored) router.push("/");
   }, [router]);
 
@@ -42,8 +42,9 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      const user = await res.json();
-      localStorage.setItem("currentUser", JSON.stringify(user));
+      const data = await res.json();
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("currentUser", JSON.stringify(data.user));
       setLoading(false);
       router.push("/");
     } catch {

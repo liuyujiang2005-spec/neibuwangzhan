@@ -20,11 +20,31 @@ const statusLabel: Record<string, string> = {
   rejected: "已驳回",
 };
 
+
+interface DocRecord {
+  id?: number;
+  document_name?: string;
+  name?: string;
+  status?: string;
+  created_at?: string;
+  order_id?: string;
+  customer_name?: string;
+  business_line?: string;
+  direction?: string;
+  file_type?: string;
+  type?: string;
+  uploaded_by?: string;
+  uploadBy?: string;
+  uploadDate?: string;
+  size?: string;
+  file_url?: string;
+}
+
 export default function DocumentsPage() {
   const [search, setSearch] = useState("");
   const [businessFilter, setBusinessFilter] = useState<string | null>(null);
   const router = useRouter();
-  const [allDocs, setAllDocs] = useState<any[]>([]);
+  const [allDocs, setAllDocs] = useState<DocRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -56,7 +76,7 @@ export default function DocumentsPage() {
       const s = search.toLowerCase();
       result = result.filter(
         (d) =>
-          d.name.toLowerCase().includes(s) ||
+          (d.name || '').toLowerCase().includes(s) ||
           d.business_line && d.business_line.toLowerCase().includes(s) ||
           (d.uploaded_by || d.uploadBy || "").toLowerCase().includes(s)
       );
@@ -116,13 +136,13 @@ export default function DocumentsPage() {
                   </div>
                 </td>
                 <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.file_type || doc.type || ""}</td>
-                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.business_line || doc.businessLine || ""}</td>
+                <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.business_line || doc.business_line || ""}</td>
                 <td className="py-3 px-4 text-[var(--muted-foreground)] max-md:hidden">{doc.uploaded_by || doc.uploadBy || ""}</td>
                 <td className="py-3 px-4 font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{doc.created_at?.slice(0, 10) || doc.uploadDate || ""}</td>
                 <td className="py-3 px-4 text-right font-mono text-xs tabular-nums text-[var(--muted-foreground)] max-sm:hidden">{doc.size || ""}</td>
                 <td className="py-3 px-4">
-                  <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium", statusClass[doc.status])}>
-                    {statusLabel[doc.status]}
+                  <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium", statusClass[doc.status ?? ""])}>
+                    {statusLabel[doc.status ?? ""]}
                   </span>
                 </td>
                 <td className="py-3 px-4">

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
 export async function GET() {
@@ -8,7 +9,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await verifyAuth(req);
+  if (!auth) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
   const db = getDb();
+
   const body = await req.json();
   const { name, email, role, password } = body;
   if (!name || !email) return NextResponse.json({ error: "请填写姓名和邮箱" }, { status: 400 });
@@ -21,7 +26,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = await verifyAuth(req);
+  if (!auth) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
   const db = getDb();
+
   const body = await req.json();
   const { id, name, email, role, password } = body;
   if (!id) return NextResponse.json({ error: "请提供员工ID" }, { status: 400 });
@@ -41,7 +50,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const auth = await verifyAuth(req);
+  if (!auth) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
   const db = getDb();
+
   const body = await req.json();
   const { id } = body;
   if (!id) return NextResponse.json({ error: "请提供员工ID" }, { status: 400 });

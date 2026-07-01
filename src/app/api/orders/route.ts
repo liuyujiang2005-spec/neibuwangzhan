@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, getBusinessSteps, getStepsWithAddressType } from "@/lib/db";
+import { verifyAuth } from "@/lib/auth";
+import { getDb, getStepsWithAddressType } from "@/lib/db";
 
 // GET /api/orders?business_type_id=&status=
 export async function GET(req: NextRequest) {
@@ -31,7 +32,11 @@ export async function GET(req: NextRequest) {
 
 // POST /api/orders
 export async function POST(req: NextRequest) {
+  const auth = await verifyAuth(req);
+  if (!auth) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
   const db = getDb();
+
   const body = await req.json();
   const { customer_name, business_type_id, description, responsible_person, total_amount, sub_service_type, address_type, monthly_rent } = body;
 
@@ -39,8 +44,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "请填写客户名和业务线" }, { status: 400 });
   }
 
-  const count = db.prepare("SELECT COUNT(*) as c FROM orders").get() as { c: number };
-  const id = `ORD-${String(count.c + 1).padStart(3, "0")}`;
+  const id = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const now = new Date().toISOString();
   const ssType = sub_service_type || "";
 

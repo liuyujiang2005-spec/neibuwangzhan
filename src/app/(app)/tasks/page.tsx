@@ -1,20 +1,20 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { Plus, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchTasks, createTask as apiCreateTask, updateTaskStatus } from "@/lib/api";
 import type { Task } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const statusColumns = [
   { key: "pending" as const, label: "待处理" },
   { key: "in_progress" as const, label: "进行中" },
   { key: "completed" as const, label: "已完成" },
 ];
-import { cn } from "@/lib/utils";
-
-const priorityDot: Record<Task["priority"], string> = {
+const priorityDot: Record<string, string> = {
   low: "bg-[var(--muted-foreground)]/30",
   medium: "bg-[var(--info)]",
   high: "bg-[var(--destructive)]",
@@ -33,8 +33,11 @@ const columnBg: Record<string, string> = {
 };
 
 export default function TasksPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
+  const [taskList, setTaskList] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
   const [businessFilter, setBusinessFilter] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,8 +59,6 @@ export default function TasksPage() {
     }
     load();
   }, [businessFilter]);
-  const [taskList, setTaskList] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
@@ -72,13 +73,13 @@ export default function TasksPage() {
     const result: Record<string, Task[]> = { pending: [], in_progress: [], completed: [] };
     for (const task of sourceList) {
       if (filter !== "all" && task.assignee !== filter) continue;
-      result[task.status].push(task);
+      result[task.status || "pending"].push(task);
     }
     return result;
   }, [filter, businessFilter, taskList]);
 
-  const assignees = useMemo(() => [...new Set(taskList.map((t) => t.assignee))], [taskList]);
-  const businessLines = useMemo(() => [...new Set(taskList.map((t) => t.business_line))], [taskList]);
+  const assignees = useMemo(() => [...new Set(taskList.map((t) => t.assignee || ""))], [taskList]);
+  const businessLines = useMemo(() => [...new Set(taskList.map((t) => t.business_line || ""))], [taskList]);
 
   const handleAddTask = () => {
     if (!newTaskTitle.trim() || !newTaskAssignee) return;
@@ -89,7 +90,7 @@ export default function TasksPage() {
       assignee: newTaskAssignee,
       priority: newTaskPriority,
       status: "pending",
-      businessLine: businessFilter || newTaskBusinessLine,
+      business_line: businessFilter || newTaskBusinessLine,
       deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     };
     apiCreateTask(newTask).then(() => {
@@ -200,7 +201,7 @@ export default function TasksPage() {
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={cn("inline-block size-2 shrink-0 rounded-full", priorityDot[task.priority])} />
+                        <span className={cn("inline-block size-2 shrink-0 rounded-full", priorityDot[task.priority || "medium"])} />
                         <p className="text-sm font-medium text-[var(--foreground)]">{task.title}</p>
                       </div>
                       <p className="mt-1 text-xs text-[var(--muted-foreground)] line-clamp-2">{task.description}</p>
@@ -213,7 +214,7 @@ export default function TasksPage() {
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex size-6 items-center justify-center rounded-full bg-[var(--sidebar-accent)] text-xs font-medium text-[var(--sidebar-accent-foreground)]">
-                        {task.assignee.slice(0, 1)}
+                        {(task.assignee || "").slice(0, 1)}
                       </div>
                       <span className="font-mono text-xs tabular-nums text-[var(--muted-foreground)]">{task.deadline}</span>
                     </div>

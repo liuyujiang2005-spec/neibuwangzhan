@@ -86,6 +86,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setOpen(false);
@@ -120,8 +122,6 @@ export function Sidebar() {
       <div className="border-t border-[var(--sidebar-border)] px-5 py-3">
         <div className="flex items-center gap-3">
 {(() => {
-            const { user, logout } = useAuth();
-            const router = useRouter();
             const initial = user?.name?.charAt(0) || "?";
             const roleLabel = user?.role === "admin" ? "管理员" : user?.role === "client" ? "客户" : "员工";
             return (<>

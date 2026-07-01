@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Save, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fetchEmployees, createEmployee, updateEmployee, deleteEmployee } from "@/lib/api";
+import { type Employee, fetchEmployees, createEmployee, updateEmployee, deleteEmployee } from "@/lib/api";
 
 export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -37,11 +37,11 @@ export default function SettingsPage() {
     }
   };
 
-  const handleEdit = (emp: any) => {
-    setEditingId(emp.id);
+  const handleEdit = (emp: Employee) => {
+    setEditingId(Number(emp.id));
     setEditName(emp.name);
-    setEditEmail(emp.email);
-    setEditRole(emp.role);
+    setEditEmail(emp.email ?? "");
+    setEditRole(emp.role ?? "");
   };
 
   const handleSaveEdit = async () => {

@@ -10,8 +10,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const stored = localStorage.getItem("currentUser");
-    if (!stored) router.replace("/login");
+    const token = localStorage.getItem("authToken");
+    if (!token) router.replace("/login");
   }, [router]);
 
   if (!user) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "@/components/auth-provider";
 import dynamic from "next/dynamic";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TodoList } from "@/components/dashboard/todo-list";

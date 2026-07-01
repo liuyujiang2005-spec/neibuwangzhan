@@ -1,5 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
+import bcrypt from "bcryptjs";
+import { companyRegistrationSteps, tisiSteps, type StepTemplate } from "./business-steps";
 
 const DB_PATH = path.join(process.cwd(), "data.db");
 
@@ -18,25 +20,8 @@ export function getDb(): Database.Database {
 
 /* ── 业务线步骤模板 ── */
 
-interface StepTemplate {
-  name: string;
-  assignee: string;
-}
-
 const businessSteps: Record<number, StepTemplate[]> = {
-  1: [
-    { name: "Bam收集客户信息（公司名称中英文+股东护照+注册地址+营业范围），整理到飞书发给Pop", assignee: "Bam" },
-    { name: "Bam帮客户注册DBD eBiz账号（需客户泰国邮箱+电话），发QR码给客户验证身份", assignee: "Bam" },
-    { name: "客户身份验证（1-2天），通过后Pop登录DBD eBiz办理公司注册", assignee: "Pop" },
-    { name: "验证不通过则Eve代为签字担保注册（耗时比正常更长）", assignee: "Eve" },
-    { name: "DBD审核通过，制作公司印章（2-3天）", assignee: "Pop" },
-    { name: "VAT注册：Pop准备文件，Fern前往税务局办理", assignee: "Fern" },
-    { name: "银行开户：Eve预审预约，通知客户来泰，Bam/Pop陪同", assignee: "Eve" },
-    { name: "地址服务：Pop联系房东、签合同、付款", assignee: "Pop" },
-    { name: "做账报税：Eve每月整理账目（当前零申报，等待老板安排改正常报税）", assignee: "Eve" },
-    { name: "公司变更：Pop接需求，Eve协助办理", assignee: "Pop" },
-    { name: "全套文件交付客户", assignee: "Bam" },
-  ],
+  1: companyRegistrationSteps,
   2: [
     { name: "确认商标名称", assignee: "Ing" },
     { name: "查重/分类确认", assignee: "Ing" },
@@ -53,20 +38,7 @@ const businessSteps: Record<number, StepTemplate[]> = {
     { name: "缴费", assignee: "Eve" },
     { name: "拿证", assignee: "" },
   ],
-  4: [
-    { name: "客户发产品图+规格书", assignee: "Fern" },
-    { name: "Fern发送产品图+规格书给Khun Ja检查是否需要TISI", assignee: "Fern" },
-    { name: "Khun Ja确认可做，准备全套文件(ISO/CB/工厂文件/公司证书/PP20/护照)发送Khun Ja", assignee: "Fern" },
-    { name: "TISI网站注册登记", assignee: "Fern" },
-    { name: "准备授权委托书", assignee: "Fern" },
-    { name: "等TISI官员联系补充文件", assignee: "Fern" },
-    { name: "审批通过，协调Next获取HS-code准备清关", assignee: "Fern" },
-    { name: "NSW系统获取TISI进口单据", assignee: "Fern" },
-    { name: "货物清关到达泰国，安排送至TISI", assignee: "Fern" },
-    { name: "官员送样品至实验室检测", assignee: "" },
-    { name: "等待检测结果，Khun Ja通知下一步", assignee: "" },
-    { name: "收到TISI证书，总周期约3-4个月", assignee: "Fern" },
-  ],
+  4: tisiSteps,
   5: [
     { name: "收集资料（产品名+标签+ISO+CFS+配方+工序+成分）", assignee: "Ing" },
     { name: "检查文件完整性", assignee: "Ing" },
@@ -343,13 +315,37 @@ function initTables(database: Database.Database) {
 
 /* ── 种子数据 ── */
 
+
+function seedStepDocuments(database: Database.Database, orderId: string, docs: Record<number, string[]>) {
+  const insert = database.prepare("INSERT INTO step_documents (step_id, order_id, document_name, status) VALUES (?, ?, ?, ?)");
+  const steps = database.prepare("SELECT id FROM order_steps WHERE order_id = ? ORDER BY step_order").all(orderId) as { id: number }[];
+  for (const [stepIdx, docList] of Object.entries(docs)) {
+    const si = Number(stepIdx) - 1;
+    if (si < steps.length) {
+      docList.forEach(doc => insert.run(steps[si].id, orderId, doc, "pending"));
+    }
+  }
+}
+
+function seedStepDocumentsWithUploaded(database: Database.Database, orderId: string, docs: Record<number, string[]>, uploadedPattern: string) {
+  const insert = database.prepare("INSERT INTO step_documents (step_id, order_id, document_name, status) VALUES (?, ?, ?, ?)");
+  const steps = database.prepare("SELECT id FROM order_steps WHERE order_id = ? ORDER BY step_order").all(orderId) as { id: number }[];
+  for (const [stepIdx, docList] of Object.entries(docs)) {
+    const si = Number(stepIdx) - 1;
+    if (si < steps.length) {
+      docList.forEach(doc => insert.run(steps[si].id, orderId, doc, doc.includes(uploadedPattern) ? "uploaded" : "pending"));
+    }
+  }
+}
+
+
 function seedData(database: Database.Database) {
   const empCount = database.prepare("SELECT COUNT(*) as c FROM employees").get() as { c: number };
   if (empCount.c === 0) {
     const insert = database.prepare("INSERT INTO employees (name, email, role, password) VALUES (?, ?, ?, ?)");
-    for (const [name, email] of [["Bam","bam@xiangtai.com"], ["Fern","fern@xiangtai.com"], ["Ing","ing@xiangtai.com"], ["Pop","pop@xiangtai.com"], ["Eve","eve@xiangtai.com"]]) insert.run(name, email, "employee", "123456");
-    insert.run("张三", "zhangsan@xiangtai.com", "admin", "123456");
-    insert.run("李四", "lisi@client.com", "client", "123456");
+    for (const [name, email] of [["Bam","bam@xiangtai.com"], ["Fern","fern@xiangtai.com"], ["Ing","ing@xiangtai.com"], ["Pop","pop@xiangtai.com"], ["Eve","eve@xiangtai.com"]]) insert.run(name, email, "employee", bcrypt.hashSync("123456", 10));
+    insert.run("张三", "zhangsan@xiangtai.com", "admin", bcrypt.hashSync("123456", 10));
+    insert.run("李四", "lisi@client.com", "client", bcrypt.hashSync("123456", 10));
   }
 
   const btCount = database.prepare("SELECT COUNT(*) as c FROM business_types").get() as { c: number };
@@ -411,68 +407,29 @@ function seedData(database: Database.Database) {
         insertNote.run(steps_001[1].id, "ORD-001", "DBD系统提交完成，等待审核结果", "Pop");
       }
 
-      // Seed step_documents for ORD-001
-      const insertStepDoc = database.prepare("INSERT INTO step_documents (step_id, order_id, document_name, status) VALUES (?, ?, ?, ?)");
-        const docs_001 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-001' ORDER BY step_order").all() as { id: number }[];
-        const crDocs = stepRequiredDocs[1];
-        if (docs_001.length >= 6 && crDocs) {
-          for (const [stepIdx, docs] of Object.entries(crDocs)) {
-            const si = Number(stepIdx) - 1;
-            docs.forEach((doc) => insertStepDoc.run(docs_001[si].id, "ORD-001", doc, doc.includes("营业执照") || doc.includes("护照") ? "uploaded" : "pending"));
-          }
-        }
+      // Seed step_documents
+      const crDocs = stepRequiredDocs[1];
+      if (crDocs) seedStepDocumentsWithUploaded(database, "ORD-001", crDocs, "营业执照");
+      // Also mark passport docs as uploaded for ORD-001
+      const passportPatch = database.prepare("UPDATE step_documents SET status = 'uploaded' WHERE order_id = ? AND document_name LIKE ?");
+      passportPatch.run("ORD-001", "%护照%");
 
         // Seed step_documents for ORD-003 (FDA cosmetics)
-        const docs_003 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-003' ORDER BY step_order").all() as { id: number }[];
-        const cosDocs = fdaCosmeticsDocs;
-        if (docs_003.length >= 8) {
-          for (const [stepIdx, docs] of Object.entries(cosDocs)) {
-            const si = Number(stepIdx) - 1;
-            docs.forEach((doc) => insertStepDoc.run(docs_003[si].id, "ORD-003", doc, doc.includes("委托书") ? "uploaded" : "pending"));
-          }
-        }
+        if (fdaCosmeticsDocs) seedStepDocumentsWithUploaded(database, "ORD-003", fdaCosmeticsDocs, "委托书");
 
         // Seed step_documents for ORD-004 (TISI)
-        const docs_004 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-004' ORDER BY step_order").all() as { id: number }[];
-        if (docs_004.length >= 12 && tisiDocs) {
-          for (const [stepIdx, docs] of Object.entries(tisiDocs)) {
-            const si = Number(stepIdx) - 1;
-            docs.forEach((doc) => insertStepDoc.run(docs_004[si].id, "ORD-004", doc, "pending"));
-          }
-        }
+        if (tisiDocs) seedStepDocuments(database, "ORD-004", tisiDocs);
         database.prepare("UPDATE order_steps SET deadline = datetime('now', '+45 days') WHERE order_id = 'ORD-004' AND step_order = 11").run();
 
         // Seed step_documents for ORD-005 (DLD)
-        const docs_005 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-005' ORDER BY step_order").all() as { id: number }[];
-        if (docs_005.length >= 5 && dldProductDocs) {
-          for (const [stepIdx, docs] of Object.entries(dldProductDocs)) {
-            const si = Number(stepIdx) - 1;
-            docs.forEach((doc) => insertStepDoc.run(docs_005[si].id, "ORD-005", doc, "pending"));
-          }
-        }
+        if (dldProductDocs) seedStepDocuments(database, "ORD-005", dldProductDocs);
 
         // Seed step_documents for ORD-008 (Mall)
-        const docs_008 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-008' ORDER BY step_order").all() as { id: number }[];
-        if (docs_008.length >= 9 && mallShopeeDocs) {
-          for (const [stepIdx, docs] of Object.entries(mallShopeeDocs)) {
-            const si = Number(stepIdx) - 1;
-            docs.forEach((doc) => insertStepDoc.run(docs_008[si].id, "ORD-008", doc, "pending"));
-          }
-        }
-        const docs_007 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-007' ORDER BY step_order").all() as { id: number }[];
-        if (docs_007.length >= 4 && addressDocs) {
-          for (const [stepIdx, docs] of Object.entries(addressDocs)) {
-            const si = Number(stepIdx) - 1;
-            docs.forEach((doc) => insertStepDoc.run(docs_007[si].id, "ORD-007", doc, doc.includes("地契") ? "uploaded" : "pending"));
-          }
-        }
-        const docs_006 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-006' ORDER BY step_order").all() as { id: number }[];
-        if (docs_006.length >= 6 && customsDocs) {
-          for (const [stepIdx, docs] of Object.entries(customsDocs)) {
-            const si = Number(stepIdx) - 1;
-            docs.forEach((doc) => insertStepDoc.run(docs_006[si].id, "ORD-006", doc, "pending"));
-          }
-        }
+        if (mallShopeeDocs) seedStepDocuments(database, "ORD-008", mallShopeeDocs);
+        // Seed step_documents for ORD-007 (Address)
+        if (addressDocs) seedStepDocumentsWithUploaded(database, "ORD-007", addressDocs, "地契");
+        // Seed step_documents for ORD-006 (Customs)
+        if (customsDocs) seedStepDocuments(database, "ORD-006", customsDocs);
 
         // Seed logistics for ORD-004 steps 7-10 (split from original single step 7)
         // Step 7: 协调Next获取HS-code (status: 进行中)

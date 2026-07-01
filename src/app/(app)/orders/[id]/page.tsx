@@ -225,7 +225,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 {steps.map((step, i) => {
                   const notes = stepNotes[step.id] || [];
                   const sd = stepDocs[step.id] || [];
-                  const uploadedCount = sd.filter((d: any) => d.status === "uploaded").length;
+                  const uploadedCount = sd.filter((d: { status?: string; uploaded?: boolean }) => d.status === "uploaded").length;
                   const times = getStepTimes(order.business_type_id, order.sub_service_type);
                   const docs = getStepDocs(order.business_type_id, order.sub_service_type);
                   const est = times[step.step_order];
@@ -457,7 +457,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       {f.slip_file && (
                         <p className="mt-0.5">
                           {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(f.slip_file) ? (
-                            <img src={f.slip_file} alt="水单" className="max-h-16 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(f.slip_file)} />
+                            <img src={f.slip_file} alt="水单" className="max-h-16 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(f.slip_file ?? null)} />
                           ) : (
                             <a href={f.slip_file} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看水单</a>
                           )}
@@ -507,7 +507,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         <FileText className="size-3.5 shrink-0 text-[var(--muted-foreground)]" />
                         <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-[var(--foreground)]">{doc.name}{doc.file_url && (
                           /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(doc.file_url) ? (
-                            <img src={doc.file_url} alt={doc.name} className="max-h-10 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity ml-1.5" onClick={() => setPreviewUrl(doc.file_url)} />
+                            <img src={doc.file_url} alt={doc.name} className="max-h-10 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity ml-1.5" onClick={() => setPreviewUrl(doc.file_url ?? null)} />
                           ) : (
                             <> <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看文件</a></>
                           )
@@ -572,7 +572,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                             {cert.file_url && (
                             <p className="mt-0.5">
                               {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(cert.file_url) ? (
-                                <img src={cert.file_url} alt="证书" className="max-h-12 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(cert.file_url)} />
+                                <img src={cert.file_url} alt="证书" className="max-h-12 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(cert.file_url ?? null)} />
                               ) : (
                                 <a href={cert.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--primary)] hover:bg-[var(--muted)] transition-colors">查看证书文件</a>
                               )}

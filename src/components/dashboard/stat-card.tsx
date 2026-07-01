@@ -1,5 +1,4 @@
-import { cn } from "@/lib/utils";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Minus } from "lucide-react";
 
 interface StatCardProps {
   label: string;
