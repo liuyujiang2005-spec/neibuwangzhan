@@ -294,6 +294,7 @@ function initTables(database: Database.Database) {
       nsw_registration TEXT DEFAULT '',
       nsw_download_status TEXT DEFAULT '',
       notes TEXT DEFAULT '',
+      file_url TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
@@ -307,6 +308,7 @@ function initTables(database: Database.Database) {
   try { database.exec("ALTER TABLE employees ADD COLUMN password TEXT DEFAULT ''"); } catch {}
   try { database.exec("ALTER TABLE finances ADD COLUMN slip_file TEXT DEFAULT ''"); } catch {}
   try { database.exec("ALTER TABLE documents ADD COLUMN file_url TEXT DEFAULT ''"); } catch {}
+  try { database.exec("ALTER TABLE certificates ADD COLUMN file_url TEXT DEFAULT ''"); } catch {}
 }
 
 /* ── 种子数据 ── */

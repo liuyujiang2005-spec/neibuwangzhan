@@ -18,12 +18,12 @@ export async function POST(
   const { id } = await params;
   const db = getDb();
   const body = await req.json();
-  const { certificate_number, product_name, issue_date, expiry_date, notes } = body;
+  const { certificate_number, product_name, issue_date, expiry_date, notes, file_url } = body;
   if (!certificate_number) return NextResponse.json({ error: "请输入证书编号" }, { status: 400 });
 
   const result = db.prepare(
-    "INSERT INTO certificates (order_id, certificate_number, product_name, issue_date, expiry_date, status, notes) VALUES (?, ?, ?, ?, ?, 'valid', ?)"
-  ).run(id, certificate_number, product_name || "", issue_date || "", expiry_date || "", notes || "");
+    "INSERT INTO certificates (order_id, certificate_number, product_name, issue_date, expiry_date, status, notes, file_url) VALUES (?, ?, ?, ?, ?, 'valid', ?, ?)"
+  ).run(id, certificate_number, product_name || "", issue_date || "", expiry_date || "", notes || "", file_url || "");
   const cert = db.prepare("SELECT * FROM certificates WHERE id = ?").get(result.lastInsertRowid);
   return NextResponse.json(cert, { status: 201 });
 }
@@ -35,7 +35,7 @@ export async function PATCH(
   const { id } = await params;
   const db = getDb();
   const body = await req.json();
-  const { cert_id, certificate_number, product_name, issue_date, expiry_date, status, nsw_registration, nsw_download_status, notes } = body;
+  const { cert_id, certificate_number, product_name, issue_date, expiry_date, status, nsw_registration, nsw_download_status, notes, file_url } = body;
   if (!cert_id) return NextResponse.json({ error: "缺少 cert_id" }, { status: 400 });
 
   const fields: string[] = [];
@@ -47,6 +47,7 @@ export async function PATCH(
   if (nsw_registration !== undefined) { fields.push("nsw_registration = ?"); values.push(nsw_registration); }
   if (nsw_download_status !== undefined) { fields.push("nsw_download_status = ?"); values.push(nsw_download_status); }
   if (notes !== undefined) { fields.push("notes = ?"); values.push(notes); }
+  if (file_url !== undefined) { fields.push("file_url = ?"); values.push(file_url); }
 
   // Auto-calculate status based on expiry_date (unless explicitly provided)
   if (status !== undefined) {

@@ -50,6 +50,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [finSlipFile, setFinSlipFile] = useState("");
   const [docFileName, setDocFileName] = useState("");
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [certFileName, setCertFileName] = useState("");
+  const [certFileUrl, setCertFileUrl] = useState("");
+  const [uploadingCert, setUploadingCert] = useState(false);
   const [docFileUrl, setDocFileUrl] = useState("");
   const [docErrorMsg, setDocErrorMsg] = useState("");
   const [certErrorMsg, setCertErrorMsg] = useState("");
@@ -534,6 +537,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                               <div><label className="text-[0.65rem] text-[var(--muted-foreground)]">NSW下载</label><select value={fields.nsw_download_status || ""} onChange={(e) => setEditCertFields((p) => ({ ...p, nsw_download_status: e.target.value }))} className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]"><option value="">—</option><option value="未下载">未下载</option><option value="已下载">已下载</option><option value="下载中">下载中</option></select></div>
                             </div>
                             <div><label className="text-[0.65rem] text-[var(--muted-foreground)]">备注</label><input value={fields.notes || ""} onChange={(e) => setEditCertFields((p) => ({ ...p, notes: e.target.value }))} className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" /></div>
+                            <div><label className="text-[0.65rem] text-[var(--muted-foreground)]">证书文件</label><div className="flex items-center gap-1.5"><label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">{uploadingCert ? "上传中..." : fields.file_url ? "重新上传" : "选择文件"}<input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingCert(true); setCertFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setEditCertFields((p) => ({ ...p, file_url: data.url })); } catch { setCertFileName(""); } finally { setUploadingCert(false); } }} disabled={uploadingCert} /></label>{fields.file_url && !certFileName && <span className="text-xs text-[var(--muted-foreground)] truncate max-w-[150px]">已上传: {fields.file_url.split("/").pop()}</span>}{certFileName && <span className="text-xs text-[var(--muted-foreground)] truncate max-w-[150px]">新: {certFileName}</span>}</div></div>
                             <div className="flex gap-1.5">
                               <button onClick={() => handleSaveCert(cert.id)} className="rounded px-2 py-1 text-xs bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">保存</button>
                               <button onClick={() => { if (isClient) return; setEditingCertId(null); setEditCertFields({}); }} className="rounded px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)]">取消</button>
@@ -542,10 +546,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         ) : (
                           <>
                             <div className="flex items-center justify-between">
-                              <p className="text-xs font-medium text-[var(--foreground)]">{cert.certificate_number}</p>
+                              <p className="text-xs font-medium text-[var(--foreground)]">{cert.certificate_number}{cert.file_url && <> <a href={cert.file_url} target="_blank" rel="noopener noreferrer" className="text-[0.6rem] text-[var(--primary)] hover:underline">查看</a></>}</p>
                               <div className="flex items-center gap-1.5">
                                 <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-medium", dynStatus === "expiring" ? "bg-[color-mix(in_oklch,var(--warning),var(--background)_85%)] text-[var(--warning)]" : dynStatus === "expired" ? "bg-[color-mix(in_oklch,var(--destructive),var(--background)_92%)] text-[var(--destructive)]" : "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]")}>{dynStatus === "expiring" ? "即将到期" : dynStatus === "expired" ? "已过期" : "有效"}</span>
-                                <button onClick={() => { if (isClient) return; setEditingCertId(cert.id); setEditCertFields({ certificate_number: cert.certificate_number, product_name: cert.product_name, issue_date: cert.issue_date, expiry_date: cert.expiry_date, nsw_registration: cert.nsw_registration, nsw_download_status: cert.nsw_download_status, notes: cert.notes, status: cert.status }); }} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="编辑证书"><Pencil className="size-3" /></button>
+                                <button onClick={() => { if (isClient) return; setEditingCertId(cert.id); setEditCertFields({ certificate_number: cert.certificate_number, product_name: cert.product_name, issue_date: cert.issue_date, expiry_date: cert.expiry_date, nsw_registration: cert.nsw_registration, nsw_download_status: cert.nsw_download_status, notes: cert.notes, status: cert.status, file_url: cert.file_url }); setCertFileName(""); setCertFileUrl(""); }} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="编辑证书"><Pencil className="size-3" /></button>
                               </div>
                             </div>
                             {cert.product_name && <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{cert.product_name}</p>}
@@ -562,11 +566,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     })}
                   </ul>
                 )}
-                {!isClient && (
+                {!isClient && (<>
                 <div className="mt-3 flex gap-2">
                   <input placeholder="证书编号…" value={newCertNo} onChange={(e) => { setNewCertNo(e.target.value); setCertErrorMsg(""); }} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <button onClick={async () => { if (!newCertNo.trim()) { setCertErrorMsg("请填写证书编号"); return; } setCertErrorMsg(""); await addCertificate(id, { certificate_number: newCertNo, issue_date: new Date().toISOString().slice(0, 10), expiry_date: new Date(Date.now() + 365*86400000).toISOString().slice(0, 10) }); setNewCertNo(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)]"><Plus className="size-3" /></button>
+                  <button onClick={async () => { if (!newCertNo.trim()) { setCertErrorMsg("请填写证书编号"); return; } setCertErrorMsg(""); await addCertificate(id, { certificate_number: newCertNo, issue_date: new Date().toISOString().slice(0, 10), expiry_date: new Date(Date.now() + 365*86400000).toISOString().slice(0, 10), file_url: certFileUrl }); setNewCertNo(""); setCertFileUrl(""); setCertFileName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)]"><Plus className="size-3" /></button>
                 </div>
+                <div className="flex gap-1.5 items-center"><label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">{uploadingCert ? "上传中..." : "选择证书文件"}<input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingCert(true); setCertFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setCertFileUrl(data.url); } catch { setCertErrorMsg("文件上传失败"); setCertFileName(""); } finally { setUploadingCert(false); } }} disabled={uploadingCert} /></label>{certFileName && <span className="text-xs text-[var(--muted-foreground)] truncate max-w-[120px]">{certFileName}</span>}</div>
+                </>
                 )}
                 {certErrorMsg && <p className="mt-1 text-xs text-[var(--destructive)]">{certErrorMsg}</p>}
               </div>

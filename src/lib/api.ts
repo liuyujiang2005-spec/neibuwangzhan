@@ -95,6 +95,7 @@ export interface Certificate {
   nsw_registration: string;
   nsw_download_status: string;
   notes: string;
+  file_url?: string;
   created_at: string;
 }
 
@@ -240,7 +241,7 @@ export async function fetchCertificates(orderId: string) {
   return res.json() as Promise<Certificate[]>;
 }
 
-export async function addCertificate(orderId: string, data: { certificate_number: string; product_name?: string; issue_date?: string; expiry_date?: string; notes?: string }) {
+export async function addCertificate(orderId: string, data: { certificate_number: string; product_name?: string; issue_date?: string; expiry_date?: string; notes?: string; file_url?: string }) {
   const res = await fetch(`/api/orders/${orderId}/certificates`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -250,7 +251,7 @@ export async function addCertificate(orderId: string, data: { certificate_number
   return res.json() as Promise<Certificate>;
 }
 
-export async function updateCertificate(orderId: string, certId: number, data: Partial<Certificate>) {
+export async function updateCertificate(orderId: string, certId: number, data: Partial<{ certificate_number?: string; product_name?: string; issue_date?: string; expiry_date?: string; status?: string; nsw_registration?: string; nsw_download_status?: string; notes?: string; file_url?: string }>) {
   const res = await fetch(`/api/orders/${orderId}/certificates`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
