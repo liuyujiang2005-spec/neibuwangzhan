@@ -43,6 +43,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [newFinType, setNewFinType] = useState("income");
   const [newFinMethod, setNewFinMethod] = useState("");
   const [newFinSlip, setNewFinSlip] = useState("");
+  const [finErrorMsg, setFinErrorMsg] = useState("");
+  const [docErrorMsg, setDocErrorMsg] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -435,8 +437,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               )}
               <div className="mt-3 space-y-1.5">
                 <div className="flex gap-1.5">
-                  <input placeholder="描述…" value={newFinDesc} onChange={(e) => setNewFinDesc(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <input type="number" placeholder="金额" value={newFinAmount} onChange={(e) => setNewFinAmount(e.target.value)} className="w-20 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                  <input placeholder="描述…" value={newFinDesc} onChange={(e) => { setNewFinDesc(e.target.value); setFinErrorMsg(""); }} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                  <input type="number" placeholder="金额" value={newFinAmount} onChange={(e) => { setNewFinAmount(e.target.value); setFinErrorMsg(""); }} className="w-20 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
                   <select value={newFinType} onChange={(e) => setNewFinType(e.target.value)} className="w-16 rounded-md border border-[var(--border)] bg-[var(--background)] px-1 py-1 text-xs outline-none focus:border-[var(--ring)]">
                     <option value="income">收入</option>
                     <option value="expense">支出</option>
@@ -445,8 +447,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="flex gap-1.5">
                   <input placeholder="付款方式（可选）" value={newFinMethod} onChange={(e) => setNewFinMethod(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
                   <input placeholder="流水单号（可选）" value={newFinSlip} onChange={(e) => setNewFinSlip(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <button onClick={async () => { if (newFinDesc.trim() && newFinAmount) { await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); load(); } }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
+                  <button onClick={async () => { if (!newFinDesc.trim() || !newFinAmount) { setFinErrorMsg("请填写描述和金额"); return; } setFinErrorMsg(""); await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
                 </div>
+                {finErrorMsg && <p className="mt-1 text-xs text-[var(--destructive)]">{finErrorMsg}</p>}
               </div>
             </div>
             );})()}
@@ -471,8 +474,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   </ul>
                 )}
                 <div className="mt-3 flex gap-2">
-                  <input placeholder="文档名…" value={newDocName} onChange={(e) => setNewDocName(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <button onClick={async () => { if (newDocName.trim()) { await uploadDocument(id, { name: newDocName, uploaded_by: "Bam", direction: "client_to_us" }); setNewDocName(""); load(); } }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]"><Upload className="size-3" /></button>
+                  <input placeholder="文档名…" value={newDocName} onChange={(e) => { setNewDocName(e.target.value); setDocErrorMsg(""); }} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                  <button onClick={async () => { if (!newDocName.trim()) { setDocErrorMsg("请填写文档名"); return; } setDocErrorMsg(""); await uploadDocument(id, { name: newDocName, uploaded_by: "Bam", direction: "client_to_us" }); setNewDocName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]"><Upload className="size-3" /></button>
+                  {docErrorMsg && <p className="mt-1 text-xs text-[var(--destructive)]">{docErrorMsg}</p>}
                 </div>
               </div>
               );})()}
