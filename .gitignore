@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 data.db*
+!.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep

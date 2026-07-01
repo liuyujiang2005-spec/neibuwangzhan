@@ -247,6 +247,7 @@ function initTables(database: Database.Database) {
       file_type TEXT DEFAULT '',
       status TEXT NOT NULL DEFAULT '待审核',
       direction TEXT DEFAULT 'client_to_us' CHECK(direction IN ('client_to_us', 'us_to_client')),
+      file_url TEXT DEFAULT '',
       uploaded_by TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     );
@@ -260,6 +261,7 @@ function initTables(database: Database.Database) {
       description TEXT DEFAULT '',
       payment_method TEXT DEFAULT '',
       slip_number TEXT DEFAULT '',
+      slip_file TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -303,6 +305,8 @@ function initTables(database: Database.Database) {
   try { database.exec("ALTER TABLE employees ADD COLUMN email TEXT DEFAULT ''"); } catch {}
   try { database.exec("ALTER TABLE employees ADD COLUMN role TEXT DEFAULT 'employee' CHECK(role IN ('admin','employee','client'))"); } catch {}
   try { database.exec("ALTER TABLE employees ADD COLUMN password TEXT DEFAULT ''"); } catch {}
+  try { database.exec("ALTER TABLE finances ADD COLUMN slip_file TEXT DEFAULT ''"); } catch {}
+  try { database.exec("ALTER TABLE documents ADD COLUMN file_url TEXT DEFAULT ''"); } catch {}
 }
 
 /* ── 种子数据 ── */

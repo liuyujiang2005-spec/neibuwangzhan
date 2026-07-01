@@ -48,6 +48,7 @@ export interface Document {
   file_type: string;
   status: string;
   direction?: string;
+  file_url?: string;
   uploaded_by: string;
   created_at: string;
 }
@@ -61,6 +62,7 @@ export interface Finance {
   description: string;
   payment_method?: string;
   slip_number?: string;
+  slip_file?: string;
   created_at: string;
 }
 
@@ -174,7 +176,7 @@ export async function fetchDocuments(orderId: string) {
   return res.json() as Promise<Document[]>;
 }
 
-export async function uploadDocument(orderId: string, data: { name: string; file_type?: string; uploaded_by?: string; direction?: string }) {
+export async function uploadDocument(orderId: string, data: { name: string; file_type?: string; uploaded_by?: string; direction?: string; file_url?: string }) {
   const res = await fetch(`/api/orders/${orderId}/documents`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -190,7 +192,7 @@ export async function fetchFinances(orderId: string) {
   return res.json() as Promise<Finance[]>;
 }
 
-export async function addFinance(orderId: string, data: { type: string; amount: number; description?: string; payment_method?: string; slip_number?: string }) {
+export async function addFinance(orderId: string, data: { type: string; amount: number; description?: string; payment_method?: string; slip_number?: string; slip_file?: string }) {
   const res = await fetch(`/api/orders/${orderId}/finances`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

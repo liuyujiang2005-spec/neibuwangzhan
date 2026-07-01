@@ -45,6 +45,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [newFinMethod, setNewFinMethod] = useState("");
   const [newFinSlip, setNewFinSlip] = useState("");
   const [finErrorMsg, setFinErrorMsg] = useState("");
+  const [finFileName, setFinFileName] = useState("");
+  const [uploadingFin, setUploadingFin] = useState(false);
+  const [finSlipFile, setFinSlipFile] = useState("");
+  const [docFileName, setDocFileName] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docFileUrl, setDocFileUrl] = useState("");
   const [docErrorMsg, setDocErrorMsg] = useState("");
   const [certErrorMsg, setCertErrorMsg] = useState("");
   const { user } = useAuth();
@@ -452,7 +458,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="flex gap-1.5">
                   <input placeholder="付款方式（可选）" value={newFinMethod} onChange={(e) => setNewFinMethod(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
                   <input placeholder="流水单号（可选）" value={newFinSlip} onChange={(e) => setNewFinSlip(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <button onClick={async () => { if (!newFinDesc.trim() || !newFinAmount) { setFinErrorMsg("请填写描述和金额"); return; } setFinErrorMsg(""); await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
+                  <button onClick={async () => { if (!newFinDesc.trim() || !newFinAmount) { setFinErrorMsg("请填写描述和金额"); return; } setFinErrorMsg(""); await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: finSlipFile }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
+                </div>
+                <div className="flex gap-1.5 items-center">
+                  <label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">
+                    {uploadingFin ? "上传中..." : "选择水单"}
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingFin(true); setFinFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setFinSlipFile(data.url); } catch { setFinErrorMsg("上传失败"); setFinFileName(""); } finally { setUploadingFin(false); } }} disabled={uploadingFin} />
+                  </label>
+                  {finFileName && <span className="text-xs text-[var(--muted-foreground)] truncate max-w-[120px]">{finFileName}</span>}
                 </div>
                 {finErrorMsg && <p className="mt-1 text-xs text-[var(--destructive)]">{finErrorMsg}</p>}
               </div>
@@ -473,16 +486,23 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     {clientDocs.map((doc) => (
                       <li key={doc.id} className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-[var(--secondary)]">
                         <FileText className="size-3.5 shrink-0 text-[var(--muted-foreground)]" />
-                        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-[var(--foreground)]">{doc.name}</p>
+                        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-[var(--foreground)]">{doc.file_url ? <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-[var(--primary)] hover:underline">{doc.name}</a> : doc.name}</p>
                           <span className={cn("text-xs", doc.status === "已审核" ? "text-[var(--success)]" : "text-[var(--warning)]")}>{doc.status}</span></div>
                       </li>
                     ))}
                   </ul>
                 )}
                 {!isClient && (
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 space-y-1.5">
+                <div className="flex gap-2">
                   <input placeholder="文档名…" value={newDocName} onChange={(e) => { setNewDocName(e.target.value); setDocErrorMsg(""); }} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <button onClick={async () => { if (!newDocName.trim()) { setDocErrorMsg("请填写文档名"); return; } setDocErrorMsg(""); await uploadDocument(id, { name: newDocName, uploaded_by: "Bam", direction: "client_to_us" }); setNewDocName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
+                  <label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">
+                    {uploadingDoc ? "上传中..." : "选择文件"}
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingDoc(true); setDocFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setDocFileUrl(data.url); } catch { setDocErrorMsg("文件上传失败"); setDocFileName(""); } finally { setUploadingDoc(false); } }} disabled={uploadingDoc} />
+                  </label>
+                  <button onClick={async () => { if (!newDocName.trim()) { setDocErrorMsg("请填写文档名"); return; } setDocErrorMsg(""); await uploadDocument(id, { name: newDocName, uploaded_by: "Bam", direction: "client_to_us", file_url: docFileUrl }); setNewDocName(""); setDocFileUrl(""); setDocFileName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
+                </div>
+                {docFileName && <p className="text-xs text-[var(--muted-foreground)]">已选择: {docFileName}</p>}
                 </div>
                 )}
                 {docErrorMsg && <p className="mt-1 text-xs text-[var(--destructive)]">{docErrorMsg}</p>}
