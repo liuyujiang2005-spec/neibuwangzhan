@@ -28,6 +28,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [stepNotes, setStepNotes] = useState<Record<number, StepNote[]>>({});
   const [stepDocs, setStepDocs] = useState<Record<number, StepDocument[]>>({});
   const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>({});
+  const [confirmingStepId, setConfirmingStepId] = useState<number | null>(null);
   const [newNotes, setNewNotes] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -89,6 +90,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setStepDocs((prev) => ({ ...prev, [stepId]: docs }));
   };
 
+  const handleConfirmComplete = async (stepId: number) => {
+    const noteContent = newNotes[stepId]?.trim();
+    setConfirmingStepId(null);
+    setNewNotes((prev) => ({ ...prev, [stepId]: "" }));
+    try {
+      if (noteContent) {
+        await addStepNote(id, stepId, noteContent, "Bam");
+      }
+      await updateStep(id, stepId, { status: "已完成" });
+      load();
+    } catch { setError("更新失败"); }
+  };
+
   const handleStepUpdate = async (stepId: number, newStatus: string) => {
     try {
       await updateStep(id, stepId, { status: newStatus });
@@ -133,6 +147,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {order.address_type === "xiangtai" && <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-[color-mix(in_oklch,var(--primary),var(--background)_88%)] text-[var(--primary)]">湘泰地址</span>}
               {order.address_type === "client" && order.business_type_id === 7 && <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-[color-mix(in_oklch,var(--info),var(--background)_88%)] text-[var(--info)]">客户地址</span>}
               <span className="text-xs text-[var(--muted-foreground)]">¥{order.total_amount.toLocaleString()}</span>
+              <span className="text-xs text-[var(--muted-foreground)]">· {steps.filter(s => s.status === "已完成").length}/{steps.length} 已完成</span>
             </div>
           </div>
         </div>
@@ -156,7 +171,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Progress steps with notes + required docs */}
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
-            <h3 className="mb-5 text-sm font-medium text-[var(--foreground)]">进度追踪</h3>
+            <h3 className="mb-4 text-sm font-medium text-[var(--foreground)]">进度追踪</h3>
+            {steps.length > 0 && (
+              <div className="mb-5 flex items-center gap-3">
+                <span className="text-xs text-[var(--muted-foreground)] shrink-0">已完成 {steps.filter(s => s.status === "已完成").length}/{steps.length}</span>
+                <div className="flex-1 h-2 rounded-full bg-[var(--muted)] overflow-hidden">
+                  <div className={cn("h-full rounded-full transition-all duration-300", steps.filter(s => s.status === "已完成").length === steps.length ? "bg-[var(--success)]" : "bg-[var(--success)]")} style={{ width: `${Math.round(steps.filter(s => s.status === "已完成").length / steps.length * 100)}%` }} />
+                </div>
+                <span className="text-xs font-medium shrink-0 text-[var(--muted-foreground)]">{steps.filter(s => s.status === "已完成").length === steps.length ? "全部完成" : `${Math.round(steps.filter(s => s.status === "已完成").length / steps.length * 100)}%`}</span>
+              </div>
+            )}
             {steps.length === 0 ? (
               <p className="text-sm text-[var(--muted-foreground)]">暂无步骤</p>
             ) : (
@@ -236,20 +260,41 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           )}
                           {step.assignee && <span className="text-xs text-[var(--muted-foreground)]">{step.assignee}</span>}
                           {est && <span className="text-xs text-[var(--muted-foreground)]">⏱ {est}</span>}
-                          {isWaiting && (
-                            <span className={cn("text-xs font-medium", isExceeded ? "text-[var(--destructive)]" : "text-[var(--info)]")}>
-                              ⏳ 已等待 {elapsedDays} 天{isExceeded && "（已超期）"}
-                            </span>
-                          )}
+
                           {step.submission_count > 0 && (
                             <span className="text-xs font-medium text-[var(--info)]">提交 {step.submission_count}/2 · 剩{2 - step.submission_count}次</span>
                           )}
                         </div>
-                        {step.status !== "已完成" && step.status !== "阻塞" && expanded && (
-                          <div className="mt-1.5 flex gap-1.5">
-                            <button onClick={() => handleStepUpdate(step.id, "已完成")} className="rounded px-2 py-0.5 text-xs text-[var(--success)] hover:bg-[color-mix(in_oklch,var(--success),var(--background)_90%)] transition-colors">标记完成</button>
-                            <button onClick={() => handleStepUpdate(step.id, "阻塞")} className="rounded px-2 py-0.5 text-xs text-[var(--destructive)] hover:bg-[color-mix(in_oklch,var(--destructive),var(--background)_90%)] transition-colors">标记阻塞</button>
+                        {step.status !== "已完成" && step.status !== "阻塞" && (
+                          <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                            {confirmingStepId === step.id ? (
+                              <>
+                                <input
+                                  value={newNotes[step.id] || ""}
+                                  onChange={(e) => setNewNotes((p) => ({ ...p, [step.id]: e.target.value }))}
+                                  onKeyDown={(e) => { if (e.key === "Enter") handleConfirmComplete(step.id); if (e.key === "Escape") setConfirmingStepId(null); }}
+                                  placeholder="完成备注（可选）..."
+                                  className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)] w-40"
+                                  autoFocus
+                                />
+                                <button onClick={() => handleConfirmComplete(step.id)} className="rounded px-2 py-0.5 text-xs bg-[var(--success)] text-[var(--success-foreground)] hover:bg-[color-mix(in_oklch,var(--success),var(--foreground)_20%)] transition-colors">确认完成</button>
+                                <button onClick={() => { setConfirmingStepId(null); setNewNotes((p) => ({ ...p, [step.id]: "" })); }} className="rounded px-2 py-0.5 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">取消</button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => setConfirmingStepId(step.id)} className="rounded px-2 py-0.5 text-xs text-[var(--success)] hover:bg-[color-mix(in_oklch,var(--success),var(--background)_90%)] transition-colors">标记完成</button>
+                                <button onClick={() => handleStepUpdate(step.id, "阻塞")} className="rounded px-2 py-0.5 text-xs text-[var(--destructive)] hover:bg-[color-mix(in_oklch,var(--destructive),var(--background)_90%)] transition-colors">标记阻塞</button>
+                              </>
+                            )}
+                            {isWaiting && (
+                              <span className={cn("text-xs font-medium", isExceeded ? "text-[var(--destructive)]" : "text-[var(--info)]")}>
+                                ⏳ {elapsedDays} 天{isExceeded && "（超期）"}
+                              </span>
+                            )}
                           </div>
+                        )}
+                        {step.status === "已完成" && step.completed_at && (
+                          <p className="mt-1 text-xs text-[var(--muted-foreground)]">完成于 {step.completed_at.slice(0, 16).replace("T", " ")}</p>
                         )}
 
                         {/* Expand/collapse for notes + docs */}
