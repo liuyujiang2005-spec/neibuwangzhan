@@ -13,13 +13,14 @@ interface BusinessLinePageProps {
   label: string;
   accentHue: number;
   description: string;
+  subServiceType?: string;
 }
 
 const accentStyles = (hue: number) => ({
   accentBorder: `border-[color-mix(in_oklch,oklch(0.55_0.14_${hue}),var(--background)_70%)]`,
 });
 
-export function BusinessLinePage({ businessKey, label, accentHue, description }: BusinessLinePageProps) {
+export function BusinessLinePage({ businessKey, label, accentHue, description, subServiceType }: BusinessLinePageProps) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +34,8 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
         const bt = types.find((t) => t.name === businessKey);
         if (bt) {
           const data = await fetchOrders({ business_type_id: bt.id });
-          setOrders(data);
+          const filtered = subServiceType ? data.filter((o: Order) => o.sub_service_type === subServiceType) : data;
+          setOrders(filtered);
         }
       } catch (err) {
         console.error("BLP load error:", err);
@@ -42,7 +44,7 @@ export function BusinessLinePage({ businessKey, label, accentHue, description }:
       }
     }
     load();
-  }, [businessKey]);
+  }, [businessKey, subServiceType]);
 
   const stats = useMemo(() => {
     const total = orders.length;

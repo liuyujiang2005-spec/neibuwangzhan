@@ -168,9 +168,20 @@ export function getBusinessSteps(businessTypeId: number, subServiceType?: string
     { name: "商品需有FDA/TISI认证（检查）", assignee: "" },
     { name: "店铺上线", assignee: "" },
   ];
-  // NBTC is a TISI sub-service, currently no dedicated step template
+  // NBTC sub-service (same flow as TISI but NBTC-branded)
   if (subServiceType === "nbtc") return [
-    { name: "暂无负责人 — NBTC流程待确认", assignee: "" },
+    { name: "客户发产品图+规格书", assignee: "Fern" },
+    { name: "Fern发送产品图+规格书给Khun Ja检查是否需要NBTC", assignee: "Fern" },
+    { name: "Khun Ja确认可做，准备全套文件(ISO/CB/工厂文件/公司证书/PP20/护照)发送Khun Ja", assignee: "Fern" },
+    { name: "NBTC网站注册登记", assignee: "Fern" },
+    { name: "准备授权委托书", assignee: "Fern" },
+    { name: "等NBTC官员联系补充文件", assignee: "Fern" },
+    { name: "审批通过，协调Next获取HS-code准备清关", assignee: "Fern" },
+    { name: "NSW系统获取NBTC进口单据", assignee: "Fern" },
+    { name: "货物清关到达泰国，安排送至NBTC", assignee: "Fern" },
+    { name: "官员送样品至实验室检测", assignee: "" },
+    { name: "等待检测结果，Khun Ja通知下一步", assignee: "" },
+    { name: "收到NBTC证书，总周期约3-4个月", assignee: "Fern" },
   ];
   return businessSteps[businessTypeId] || [{ name: "待定", assignee: "" }];
 }
@@ -186,7 +197,7 @@ export function getStepsWithAddressType(businessTypeId: number, subServiceType?:
   return base;
 }
 
-import { stepRequiredDocs, stepTimeEstimates, subServices, fdaCosmeticsDocs, fdaFoodDocs, tisiDocs, dldProductDocs, customsDocs, addressDocs, mallShopeeDocs } from "./constants";
+import { stepRequiredDocs, stepTimeEstimates, subServices, fdaCosmeticsDocs, fdaFoodDocs, tisiDocs, nbtcDocs, nbtcTimes, dldProductDocs, customsDocs, addressDocs, mallShopeeDocs } from "./constants";
 export { stepRequiredDocs, stepTimeEstimates, subServices };
 
 /* ── 建表 ── */
