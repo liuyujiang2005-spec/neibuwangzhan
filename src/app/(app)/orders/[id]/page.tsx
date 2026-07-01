@@ -56,6 +56,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [docFileUrl, setDocFileUrl] = useState("");
   const [docErrorMsg, setDocErrorMsg] = useState("");
   const [certErrorMsg, setCertErrorMsg] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { user } = useAuth();
   const isClient = user?.role === "client";
 
@@ -452,7 +453,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                       {f.description && <p className="mt-0.5 text-xs text-[var(--foreground)]">{f.description}</p>}
                       {(f.payment_method || f.slip_number) && <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]">{f.payment_method || ""}{f.payment_method && f.slip_number && " · "}{f.slip_number ? "流水号 " + f.slip_number : ""}</p>}
-                      {f.slip_file && <p className="mt-0.5"><a href={f.slip_file} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看水单</a></p>}
+                      {f.slip_file && (
+                        <p className="mt-0.5">
+                          {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(f.slip_file) ? (
+                            <img src={f.slip_file} alt="水单" className="max-h-16 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(f.slip_file)} />
+                          ) : (
+                            <a href={f.slip_file} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看水单</a>
+                          )}
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -470,14 +479,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="flex gap-1.5">
                   <input placeholder="付款方式（可选）" value={newFinMethod} onChange={(e) => setNewFinMethod(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
                   <input placeholder="流水单号（可选）" value={newFinSlip} onChange={(e) => setNewFinSlip(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <button onClick={async () => { if (!newFinDesc.trim() || !newFinAmount) { setFinErrorMsg("请填写描述和金额"); return; } setFinErrorMsg(""); await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: finSlipFile }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
-                </div>
-                <div className="flex gap-1.5 items-center">
-                  <label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">
-                    {uploadingFin ? "上传中..." : "选择水单"}
-                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingFin(true); setFinFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setFinSlipFile(data.url); } catch { setFinErrorMsg("上传失败"); setFinFileName(""); } finally { setUploadingFin(false); } }} disabled={uploadingFin} />
+                  <label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="上传水单">
+                    <Paperclip className="size-3" />
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingFin(true); setFinFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setFinSlipFile(data.url); await addFinance(id, { type: newFinType, amount: Number(newFinAmount || "0"), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: data.url }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); load(); } catch { setFinErrorMsg("上传失败"); setFinFileName(""); } finally { setUploadingFin(false); } }} disabled={uploadingFin} />
                   </label>
-                  {finFileName && <span className="text-xs text-[var(--muted-foreground)] truncate max-w-[120px]">{finFileName}</span>}
+                  <button onClick={async () => { if (!newFinDesc.trim() || !newFinAmount) { setFinErrorMsg("请填写描述和金额"); return; } setFinErrorMsg(""); await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: finSlipFile }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); load(); }} disabled={uploadingFin} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)] disabled:opacity-50">{uploadingFin ? "上传中..." : "添加"}</button>
                 </div>
                 {finErrorMsg && <p className="mt-1 text-xs text-[var(--destructive)]">{finErrorMsg}</p>}
               </div>
@@ -498,7 +504,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     {clientDocs.map((doc) => (
                       <li key={doc.id} className="flex items-center gap-2 rounded-md p-2 transition-colors hover:bg-[var(--secondary)]">
                         <FileText className="size-3.5 shrink-0 text-[var(--muted-foreground)]" />
-                        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-[var(--foreground)]">{doc.name}{doc.file_url && <> <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看文件</a></>}</p>
+                        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-[var(--foreground)]">{doc.name}{doc.file_url && (
+                          /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(doc.file_url) ? (
+                            <img src={doc.file_url} alt={doc.name} className="max-h-10 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity ml-1.5" onClick={() => setPreviewUrl(doc.file_url)} />
+                          ) : (
+                            <> <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看文件</a></>
+                          )
+                        )}</p>
                           <span className={cn("text-xs", doc.status === "已审核" ? "text-[var(--success)]" : "text-[var(--warning)]")}>{doc.status}</span></div>
                       </li>
                     ))}
@@ -556,7 +568,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           <>
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-medium text-[var(--foreground)]">{cert.certificate_number}</p>
-                            {cert.file_url && <p className="mt-0.5"><a href={cert.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--primary)] hover:bg-[var(--muted)] transition-colors">查看证书文件</a></p>}
+                            {cert.file_url && (
+                            <p className="mt-0.5">
+                              {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(cert.file_url) ? (
+                                <img src={cert.file_url} alt="证书" className="max-h-12 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(cert.file_url)} />
+                              ) : (
+                                <a href={cert.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded border border-[var(--border)] px-2 py-0.5 text-xs text-[var(--primary)] hover:bg-[var(--muted)] transition-colors">查看证书文件</a>
+                              )}
+                            </p>
+                          )}
                               <div className="flex items-center gap-1.5">
                                 <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-medium", dynStatus === "expiring" ? "bg-[color-mix(in_oklch,var(--warning),var(--background)_85%)] text-[var(--warning)]" : dynStatus === "expired" ? "bg-[color-mix(in_oklch,var(--destructive),var(--background)_92%)] text-[var(--destructive)]" : "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]")}>{dynStatus === "expiring" ? "即将到期" : dynStatus === "expired" ? "已过期" : "有效"}</span>
                                 <button onClick={() => { if (isClient) return; setEditingCertId(cert.id); setEditCertFields({ certificate_number: cert.certificate_number, product_name: cert.product_name, issue_date: cert.issue_date, expiry_date: cert.expiry_date, nsw_registration: cert.nsw_registration, nsw_download_status: cert.nsw_download_status, notes: cert.notes, status: cert.status, file_url: cert.file_url }); setCertFileName(""); setCertFileUrl(""); }} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="编辑证书"><Pencil className="size-3" /></button>
@@ -590,6 +610,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       </div>
+
+      {/* Image preview overlay */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center cursor-pointer" onClick={() => setPreviewUrl(null)} onKeyDown={(e) => { if (e.key === "Escape") setPreviewUrl(null); }}>
+          <img src={previewUrl} alt="预览" className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl" />
+        </div>
+      )}
     </div>
   );
 }
