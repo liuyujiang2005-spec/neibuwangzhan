@@ -48,10 +48,13 @@ export async function POST(req: NextRequest) {
     const safeName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const filePath = path.join(uploadsDir, safeName);
 
+    console.log("[上传] 写入文件:", filePath);
     await writeFile(filePath, buffer);
+    console.log("[上传] 写入成功:", safeName);
 
     return NextResponse.json({ url: `/uploads/${safeName}`, name: file.name });
-  } catch {
+  } catch (err) {
+    console.error("[上传] 失败:", err);
     return NextResponse.json({ error: "上传失败" }, { status: 500 });
   }
 }
