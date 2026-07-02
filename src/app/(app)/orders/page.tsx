@@ -22,6 +22,7 @@ export default function OrdersPage() {
   const { user } = useAuth();
   const [deleteTarget, setDeleteTarget] = useState<{id:string,name:string}|null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -46,13 +47,23 @@ export default function OrdersPage() {
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    setErrorMsg(null);
     try {
-      await deleteOrder(deleteTarget.id);
+      console.log("[删除] 开始删除订单:", deleteTarget.id);
+      const res = await fetch(`/api/orders/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      console.log("[删除] 响应:", res.status, data);
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
       setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
       setDeleteTarget(null);
-    } catch (err) {
-      console.error("删除订单失败:", err);
-      alert("删除失败，请重试");
+    } catch (err: any) {
+      console.error("[删除] 失败:", err);
+      setErrorMsg(err.message || "删除失败，请重试");
     } finally {
       setDeleting(false);
     }
@@ -174,6 +185,7 @@ export default function OrdersPage() {
             <p className="mt-2 text-sm text-[var(--muted-foreground)]">
               确定要删除订单 <span className="font-mono font-medium text-[var(--foreground)]">{deleteTarget.id}</span>（{deleteTarget.name}）吗？此操作会同时删除所有关联的步骤、文档、费用和证书，且不可恢复。
             </p>
+            {errorMsg && <p className="mt-3 text-sm text-[var(--destructive)]">{errorMsg}</p>}
             <div className="mt-5 flex justify-end gap-3">
               <button onClick={() => setDeleteTarget(null)} disabled={deleting} className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors disabled:opacity-50">取消</button>
               <button onClick={handleConfirmDelete} disabled={deleting} className="rounded-lg bg-[var(--destructive)] px-4 py-2 text-sm font-medium text-white hover:bg-[color-mix(in_oklch,var(--destructive),var(--foreground)_20%)] transition-colors disabled:opacity-50">

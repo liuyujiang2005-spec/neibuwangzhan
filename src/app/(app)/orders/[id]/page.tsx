@@ -76,6 +76,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [savingOrder, setSavingOrder] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{id:string,name:string}|null>(null);
   const [deletingOrder, setDeletingOrder] = useState(false);
+  const [orderDeleteError, setOrderDeleteError] = useState<string | null>(null);
   // 费用编辑删除
   const [editingFinanceId, setEditingFinanceId] = useState<number | null>(null);
   const [editFinanceFields, setEditFinanceFields] = useState<Partial<Finance>>({});
@@ -264,12 +265,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const handleConfirmDeleteOrder = async () => {
     if (!deleteTarget) return;
     setDeletingOrder(true);
+    setOrderDeleteError(null);
     try {
-      await deleteOrder(deleteTarget.id);
+      console.log("[删除详情] 开始删除订单:", deleteTarget.id);
+      const res = await fetch(`/api/orders/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      console.log("[删除详情] 响应:", res.status, data);
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
       router.push("/orders");
-    } catch (err) {
-      console.error("删除订单失败:", err);
-      setError("删除失败，请重试");
+    } catch (err: any) {
+      console.error("[删除详情] 失败:", err);
+      setOrderDeleteError(err.message || "删除失败，请重试");
       setDeletingOrder(false);
     }
   };
