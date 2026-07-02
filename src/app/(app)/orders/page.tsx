@@ -49,20 +49,11 @@ export default function OrdersPage() {
     setDeleting(true);
     setErrorMsg(null);
     try {
-      console.log("[删除] 开始删除订单:", deleteTarget.id);
-      const res = await fetch(`/api/orders/${deleteTarget.id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      console.log("[删除] 响应:", res.status, data);
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
+      await deleteOrder(deleteTarget.id);
       setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err: any) {
-      console.error("[删除] 失败:", err);
+      console.error("删除订单失败:", err);
       setErrorMsg(err.message || "删除失败，请重试");
     } finally {
       setDeleting(false);

@@ -267,19 +267,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setDeletingOrder(true);
     setOrderDeleteError(null);
     try {
-      console.log("[删除详情] 开始删除订单:", deleteTarget.id);
-      const res = await fetch(`/api/orders/${deleteTarget.id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json();
-      console.log("[删除详情] 响应:", res.status, data);
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
+      await deleteOrder(deleteTarget.id);
       router.push("/orders");
     } catch (err: any) {
-      console.error("[删除详情] 失败:", err);
+      console.error("删除订单失败:", err);
       setOrderDeleteError(err.message || "删除失败，请重试");
       setDeletingOrder(false);
     }
