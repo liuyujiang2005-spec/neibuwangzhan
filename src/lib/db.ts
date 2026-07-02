@@ -173,7 +173,7 @@ export function getStepsWithAddressType(businessTypeId: number, subServiceType?:
   return base;
 }
 
-import { stepRequiredDocs, stepTimeEstimates, subServices, fdaCosmeticsDocs, fdaFoodDocs, tisiDocs, nbtcDocs, nbtcTimes, dldProductDocs, customsDocs, addressDocs, mallShopeeDocs } from "./constants";
+import { stepRequiredDocs, stepTimeEstimates, subServices } from "./constants";
 export { stepRequiredDocs, stepTimeEstimates, subServices };
 
 /* ── 建表 ── */
@@ -316,29 +316,6 @@ function initTables(database: Database.Database) {
 /* ── 种子数据 ── */
 
 
-function seedStepDocuments(database: Database.Database, orderId: string, docs: Record<number, string[]>) {
-  const insert = database.prepare("INSERT INTO step_documents (step_id, order_id, document_name, status) VALUES (?, ?, ?, ?)");
-  const steps = database.prepare("SELECT id FROM order_steps WHERE order_id = ? ORDER BY step_order").all(orderId) as { id: number }[];
-  for (const [stepIdx, docList] of Object.entries(docs)) {
-    const si = Number(stepIdx) - 1;
-    if (si < steps.length) {
-      docList.forEach(doc => insert.run(steps[si].id, orderId, doc, "pending"));
-    }
-  }
-}
-
-function seedStepDocumentsWithUploaded(database: Database.Database, orderId: string, docs: Record<number, string[]>, uploadedPattern: string) {
-  const insert = database.prepare("INSERT INTO step_documents (step_id, order_id, document_name, status) VALUES (?, ?, ?, ?)");
-  const steps = database.prepare("SELECT id FROM order_steps WHERE order_id = ? ORDER BY step_order").all(orderId) as { id: number }[];
-  for (const [stepIdx, docList] of Object.entries(docs)) {
-    const si = Number(stepIdx) - 1;
-    if (si < steps.length) {
-      docList.forEach(doc => insert.run(steps[si].id, orderId, doc, doc.includes(uploadedPattern) ? "uploaded" : "pending"));
-    }
-  }
-}
-
-
 function seedData(database: Database.Database) {
   const empCount = database.prepare("SELECT COUNT(*) as c FROM employees").get() as { c: number };
   if (empCount.c === 0) {
@@ -354,124 +331,5 @@ function seedData(database: Database.Database) {
     for (const name of ["公司注册","商标","FDA认证","TISI","DLD","清关","地址认证","Mall开店","NBTC"]) insert.run(name);
   }
 
-  const orderCount = database.prepare("SELECT COUNT(*) as c FROM orders").get() as { c: number };
-  if (orderCount.c === 0) {
-    const insertOrder = database.prepare(
-      "INSERT INTO orders (id, customer_name, business_type_id, sub_service_type, status, responsible_person, description, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    );
-    const insertStep = database.prepare(
-      "INSERT INTO order_steps (order_id, step_name, step_order, status, assignee) VALUES (?, ?, ?, ?, ?)"
-    );
-
-    const mockOrders = [
-      { id: "ORD-001", customer: "华夏科技有限公司", bt: 1, status: "进行中", person: "Bam", desc: "有限责任公司注册，注册资本500万", amount: 35000, ss: "" },
-      { id: "ORD-002", customer: "创新品牌管理有限公司", bt: 2, status: "进行中", person: "Fern", desc: "第35类、第42类商标申请", amount: 8500, ss: "" },
-      { id: "ORD-003", customer: "康健医疗设备有限公司", bt: 3, status: "待处理", person: "Ing", desc: "化妆品FDA认证", amount: 125000, ss: "cosmetics" },
-      { id: "ORD-004", customer: "东南亚贸易有限公司", bt: 4, status: "进行中", person: "Pop", desc: "电子产品TISI认证", amount: 28000, ss: "" },
-      { id: "ORD-005", customer: "通达汽车配件有限公司", bt: 5, status: "待处理", person: "Eve", desc: "汽车零部件DLD认证", amount: 42000, ss: "" },
-      { id: "ORD-006", customer: "环球进出口有限公司", bt: 6, status: "进行中", person: "Bam", desc: "电子产品进口清关", amount: 15000, ss: "" },
-      { id: "ORD-007", customer: "新创企业管理有限公司", bt: 7, status: "已完成", person: "Fern", desc: "公司注册地址认证", amount: 5000, ss: "" },
-      { id: "ORD-008", customer: "时尚品牌运营有限公司", bt: 8, status: "待处理", person: "Pop", desc: "Lazada/Shopee双平台开店", amount: 68000, ss: "" },
-      { id: "ORD-009", customer: "生物医药科技有限公司", bt: 3, status: "进行中", person: "Ing", desc: "食品添加剂FDA认证", amount: 98000, ss: "food" },
-      { id: "ORD-010", customer: "科技创业孵化器有限公司", bt: 2, status: "已完成", person: "Eve", desc: "第9类、第38类商标注册", amount: 12000, ss: "" },
-    ];
-
-    database.transaction(() => {
-      for (const o of mockOrders) {
-        insertOrder.run(o.id, o.customer, o.bt, o.ss || "", o.status, o.person, o.desc, o.amount);
-        const steps = getBusinessSteps(o.bt, o.ss || "");
-        steps.forEach((step, i) => {
-          let s = "待处理";
-          if (o.status === "已完成") s = "已完成";
-          else if (o.status === "进行中" && i === 0) s = "已完成";
-          else if (o.status === "待处理" && i === 0) s = "进行中";
-          insertStep.run(o.id, step.name, i + 1, s, step.assignee);
-        });
-      }
-
-      const insertDoc = database.prepare("INSERT INTO documents (order_id, name, file_type, status, uploaded_by) VALUES (?, ?, ?, ?, ?)");
-      insertDoc.run("ORD-001", "营业执照副本.pdf", "资质文件", "已审核", "Bam");
-      insertDoc.run("ORD-001", "DBD核名确认函.pdf", "审批文件", "已审核", "Pop");
-      insertDoc.run("ORD-001", "VAT登记表.docx", "申请文件", "待审核", "Fern");
-
-      const insertFin = database.prepare("INSERT INTO finances (order_id, type, amount, status, description) VALUES (?, ?, ?, ?, ?)");
-      insertFin.run("ORD-001", "income", 35000, "paid", "公司注册服务费（首期）");
-      insertFin.run("ORD-001", "expense", 5000, "paid", "DBD官方注册费");
-      insertFin.run("ORD-001", "income", 15000, "pending", "公司注册尾款");
-
-      // Seed step_notes for ORD-001
-      const insertNote = database.prepare("INSERT INTO step_notes (step_id, order_id, content, created_by) VALUES (?, ?, ?, ?)");
-      const steps_001 = database.prepare("SELECT id FROM order_steps WHERE order_id = 'ORD-001' ORDER BY step_order").all() as { id: number }[];
-      if (steps_001.length >= 2) {
-        insertNote.run(steps_001[0].id, "ORD-001", "客户已发营业执照扫描件，股东护照今天下午补发", "Bam");
-        insertNote.run(steps_001[1].id, "ORD-001", "DBD系统提交完成，等待审核结果", "Pop");
-      }
-
-      // Seed step_documents
-      const crDocs = stepRequiredDocs[1];
-      if (crDocs) seedStepDocumentsWithUploaded(database, "ORD-001", crDocs, "营业执照");
-      // Also mark passport docs as uploaded for ORD-001
-      const passportPatch = database.prepare("UPDATE step_documents SET status = 'uploaded' WHERE order_id = ? AND document_name LIKE ?");
-      passportPatch.run("ORD-001", "%护照%");
-
-        // Seed step_documents for ORD-003 (FDA cosmetics)
-        if (fdaCosmeticsDocs) seedStepDocumentsWithUploaded(database, "ORD-003", fdaCosmeticsDocs, "委托书");
-
-        // Seed step_documents for ORD-004 (TISI)
-        if (tisiDocs) seedStepDocuments(database, "ORD-004", tisiDocs);
-        database.prepare("UPDATE order_steps SET deadline = datetime('now', '+45 days') WHERE order_id = 'ORD-004' AND step_order = 11").run();
-
-        // Seed step_documents for ORD-005 (DLD)
-        if (dldProductDocs) seedStepDocuments(database, "ORD-005", dldProductDocs);
-
-        // Seed step_documents for ORD-008 (Mall)
-        if (mallShopeeDocs) seedStepDocuments(database, "ORD-008", mallShopeeDocs);
-        // Seed step_documents for ORD-007 (Address)
-        if (addressDocs) seedStepDocumentsWithUploaded(database, "ORD-007", addressDocs, "地契");
-        // Seed step_documents for ORD-006 (Customs)
-        if (customsDocs) seedStepDocuments(database, "ORD-006", customsDocs);
-
-        // Seed logistics for ORD-004 steps 7-10 (split from original single step 7)
-        // Step 7: 协调Next获取HS-code (status: 进行中)
-        database.prepare("UPDATE order_steps SET logistics_status = 'active', step_data = ? WHERE order_id = 'ORD-004' AND step_order = 7").run(JSON.stringify({
-          contact_next: { name: "Next", role: "清关代理", contact: "next@logistics.com" },
-          hs_code: "8517.62.00",
-          step_detail: "已从Next获取HS-code，准备清关文件",
-        }));
-        // Step 8: NSW系统获取进口单据 (status: 待处理)
-        database.prepare("UPDATE order_steps SET step_data = ? WHERE order_id = 'ORD-004' AND step_order = 8").run(JSON.stringify({
-          nsw_system: "Thailand National Single Window",
-          step_detail: "待从TISI NSW系统获取进口电子单据",
-        }));
-        // Step 9: 货物清关到达泰国 (status: 待处理)
-        database.prepare("UPDATE order_steps SET logistics_status = 'transporting', step_data = ? WHERE order_id = 'ORD-004' AND step_order = 9").run(JSON.stringify({
-          logistics: [
-            { step: "准备清关文件(发票+箱单+委托书)", status: "pending" },
-            { step: "样品从中国发货到泰国", status: "pending" },
-            { step: "货物清关", status: "pending" },
-            { step: "安排送至TISI", status: "pending" },
-          ],
-        }));
-        // Step 10: 官员送检 (status: 待处理)
-        database.prepare("UPDATE order_steps SET step_data = ? WHERE order_id = 'ORD-004' AND step_order = 10").run(JSON.stringify({
-          step_detail: "等待官员联系安排实验室检测",
-        }));
-        // Step 2 external check (unchanged)
-        database.prepare("UPDATE order_steps SET step_data = ? WHERE order_id = 'ORD-004' AND step_order = 2").run(JSON.stringify({
-          external_check: { name: "คุณจ๋า", result: "确认需要TISI认证", date: "2026-07-01" },
-        }));
-
-        // Seed certificates for completed orders
-        const insertCert = database.prepare("INSERT INTO certificates (order_id, certificate_number, product_name, issue_date, expiry_date, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        insertCert.run("ORD-007", "CERT-2026-001", "新创企业地址认证", "2026-06-30", "2027-06-30", "valid", "地址认证通过");
-        insertCert.run("ORD-010", "TM-2026-042", "第9/38类商标", "2026-06-25", "2026-09-25", "expiring", "TM标即将到期，需提醒客户续展");
-
-        // Seed sample certificate for a FDA food order
-        insertCert.run("ORD-009", "FDA-FOOD-2026-015", "食品添加剂认证", "2026-07-15", "2027-07-15", "valid", "FDA食品认证通过");
-
-        // Set deadlines for FDA hazardous steps
-        database.prepare("UPDATE order_steps SET deadline = datetime('now', '+2 days') WHERE order_id = 'ORD-003' AND step_order <= 2").run();
-        database.prepare("UPDATE order_steps SET deadline = datetime('now', '+7 days') WHERE order_id = 'ORD-003' AND step_order = 7").run();
-    })();
-  }
 }
+
