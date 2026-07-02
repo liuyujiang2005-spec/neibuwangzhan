@@ -47,6 +47,27 @@ export default function TasksPage() {
       try {
         const data = await fetchTasks(businessFilter ? { business: businessFilter } : undefined);
         setTaskList(data);
+
+        // 加载当前用户的待办步骤
+        if (user?.name) {
+          const btMap: Record<number, string> = { 1: "公司注册", 2: "商标", 3: "FDA认证", 4: "TISI", 5: "DLD", 6: "清关", 7: "地址认证", 8: "Mall开店", 9: "NBTC" };
+          const allOrders = await fetchOrders();
+          const steps: Array<{ orderId: string; stepName: string; status: string; businessType: string }> = [];
+          for (const order of allOrders) {
+            const orderSteps = order.steps || [];
+            for (const step of orderSteps) {
+              if (step.assignee === user.name && step.status !== "已完成") {
+                steps.push({
+                  orderId: order.id,
+                  stepName: step.step_name,
+                  status: step.status,
+                  businessType: btMap[order.business_type_id] || "",
+                });
+              }
+            }
+          }
+          setAssignedSteps(steps);
+        }
       } catch (err) {
         console.error("Tasks load error:", err);
       } finally {
