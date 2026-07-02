@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
@@ -89,9 +89,12 @@ export function Sidebar() {
   const { user, logout } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
+  // 路由变化时关闭移动端菜单：渲染期间派生状态，避免在 effect 中直接 setState
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   const sidebarContent = (
     <>

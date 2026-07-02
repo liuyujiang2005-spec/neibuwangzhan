@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Upload, Download, FileText, ArrowLeft } from "lucide-react";
@@ -42,16 +42,11 @@ interface DocRecord {
 
 export default function DocumentsPage() {
   const [search, setSearch] = useState("");
-  const [businessFilter, setBusinessFilter] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const businessFilter = searchParams.get("biz");
   const [allDocs, setAllDocs] = useState<DocRecord[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const biz = params.get("biz");
-    if (biz) setBusinessFilter(biz);
-  }, []);
 
   useEffect(() => {
     async function load() {

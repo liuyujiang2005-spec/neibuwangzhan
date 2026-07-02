@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,10 +11,13 @@ import type { BusinessType, Employee } from "@/lib/api";
 
 export default function NewOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const bizName = searchParams.get("biz");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [appliedBizName, setAppliedBizName] = useState<string | null>(null);
   const [form, setForm] = useState({
     business_type_id: "",
     customer_name: "",
@@ -28,15 +31,14 @@ export default function NewOrderPage() {
     fetchEmployees().then(setEmployees).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (businessTypes.length === 0) return;
-    const params = new URLSearchParams(window.location.search);
-    const bizName = params.get("biz");
-    if (bizName) {
-      const bt = businessTypes.find(t => t.name === bizName);
-      if (bt) setForm(prev => ({ ...prev, business_type_id: String(bt.id) }));
+  // 业务线加载完成后，根据 URL 上的 biz 参数预选一次（渲染期间派生状态，而非在 effect 里 setState）
+  if (bizName && bizName !== appliedBizName && businessTypes.length > 0) {
+    const bt = businessTypes.find((t) => t.name === bizName);
+    if (bt) {
+      setAppliedBizName(bizName);
+      setForm((prev) => ({ ...prev, business_type_id: String(bt.id) }));
     }
-  }, [businessTypes]);
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));

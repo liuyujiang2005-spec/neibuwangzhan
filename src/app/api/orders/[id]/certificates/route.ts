@@ -39,7 +39,7 @@ export async function PATCH(
   if (!cert_id) return NextResponse.json({ error: "缺少 cert_id" }, { status: 400 });
 
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: unknown[] = [];
   if (certificate_number !== undefined) { fields.push("certificate_number = ?"); values.push(certificate_number); }
   if (product_name !== undefined) { fields.push("product_name = ?"); values.push(product_name); }
   if (issue_date !== undefined) { fields.push("issue_date = ?"); values.push(issue_date); }

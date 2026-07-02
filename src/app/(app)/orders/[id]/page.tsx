@@ -31,6 +31,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>({});
   const [confirmingStepId, setConfirmingStepId] = useState<number | null>(null);
   const [newNotes, setNewNotes] = useState<Record<number, string>>({});
+  const [noteErrorMsg, setNoteErrorMsg] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sidebarTab, setSidebarTab] = useState<"finances" | "docs">("finances");
@@ -59,38 +60,47 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { user } = useAuth();
   const isClient = user?.role === "client";
+  const [nowMs] = useState(() => Date.now());
 
-  const load = useCallback(async () => {
-    try {
-      const [data, docs, fins, certs] = await Promise.all([
-        fetchOrder(id),
-        fetchDocuments(id),
-        fetchFinances(id),
-        fetchCertificates(id),
-      ]);
-      setOrder(data);
-      const sts = data.steps || [];
-      setSteps(sts);
-      setDocuments(docs);
-      setFinances(fins);
-      setCertificates(certs);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const reload = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-      const notesMap: Record<number, StepNote[]> = {};
-      const docsMap: Record<number, StepDocument[]> = {};
-      await Promise.all(sts.map(async (s) => {
-        notesMap[s.id] = await fetchStepNotes(id, s.id).catch(() => []);
-        docsMap[s.id] = await fetchStepDocuments(id, s.id).catch(() => []);
-      }));
-      setStepNotes(notesMap);
-      setStepDocs(docsMap);
-    } catch {
-      setError("订单加载失败");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    let ignore = false;
+    async function run() {
+      try {
+        const [data, docs, fins, certs] = await Promise.all([
+          fetchOrder(id),
+          fetchDocuments(id),
+          fetchFinances(id),
+          fetchCertificates(id),
+        ]);
+        if (ignore) return;
+        setOrder(data);
+        const sts = data.steps || [];
+        setSteps(sts);
+        setDocuments(docs);
+        setFinances(fins);
+        setCertificates(certs);
+
+        const notesMap: Record<number, StepNote[]> = {};
+        const docsMap: Record<number, StepDocument[]> = {};
+        await Promise.all(sts.map(async (s) => {
+          notesMap[s.id] = await fetchStepNotes(id, s.id).catch(() => []);
+          docsMap[s.id] = await fetchStepDocuments(id, s.id).catch(() => []);
+        }));
+        if (ignore) return;
+        setStepNotes(notesMap);
+        setStepDocs(docsMap);
+      } catch {
+        if (!ignore) setError("订单加载失败");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
     }
-  }, [id]);
-
-  useEffect(() => { load(); }, [load]);
+    run();
+    return () => { ignore = true; };
+  }, [id, refreshKey]);
 
   const toggleExpand = (stepId: number) => {
     setExpandedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }));
@@ -98,8 +108,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const handleAddNote = async (stepId: number) => {
     const content = newNotes[stepId];
-    if (!content?.trim()) return;
-    await addStepNote(id, stepId, content, "Bam");
+    if (!content?.trim()) {
+      setNoteErrorMsg(prev => ({ ...prev, [stepId]: "请填写备注内容" }));
+      return;
+    }
+    setNoteErrorMsg(prev => ({ ...prev, [stepId]: "" }));
+    await addStepNote(id, stepId, content, user?.name || "系统");
     setNewNotes((prev) => ({ ...prev, [stepId]: "" }));
     const notes = await fetchStepNotes(id, stepId);
     setStepNotes((prev) => ({ ...prev, [stepId]: notes }));
@@ -117,10 +131,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setNewNotes((prev) => ({ ...prev, [stepId]: "" }));
     try {
       if (noteContent) {
-        await addStepNote(id, stepId, noteContent, "Bam");
+        await addStepNote(id, stepId, noteContent, user?.name || "系统");
       }
       await updateStep(id, stepId, { status: "已完成" });
-      load();
+      reload();
     } catch { setError("更新失败"); }
   };
 
@@ -129,14 +143,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       await updateCertificate(id, certId, editCertFields);
       setEditingCertId(null);
       setEditCertFields({});
-      load();
+      reload();
     } catch { setError("保存证书失败"); }
   };
 
   const handleStepUpdate = async (stepId: number, newStatus: string) => {
     try {
       await updateStep(id, stepId, { status: newStatus });
-      load();
+      reload();
     } catch { setError("更新失败"); }
   };
 
@@ -232,10 +246,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   const expanded = expandedSteps[step.id] || false;
                   const hasDocs = !!(docs[step.step_order]?.length);
                   const hasNotes = notes.length > 0;
-                  const isOverdue = step.deadline && new Date(step.deadline) < new Date() && step.status !== "已完成";
+                  const isOverdue = step.deadline && new Date(step.deadline) < new Date(nowMs) && step.status !== "已完成";
                   // TISI step 8: show elapsed days
                   const isWaiting = step.step_name.includes("等待") && step.status === "进行中";
-                  const elapsedDays = isWaiting ? Math.floor((Date.now() - new Date(step.created_at).getTime()) / 86400000) : 0;
+                  const elapsedDays = isWaiting ? Math.floor((nowMs - new Date(step.created_at).getTime()) / 86400000) : 0;
                   const isExceeded = isWaiting && elapsedDays > 60;
                   const over14Days = isWaiting && elapsedDays > 14 && step.step_name.includes("官员");
                   const over30Days = isWaiting && elapsedDays > 30 && step.step_name.includes("检测");
@@ -312,7 +326,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                               <>
                                 <input
                                   value={newNotes[step.id] || ""}
-                                  onChange={(e) => setNewNotes((p) => ({ ...p, [step.id]: e.target.value }))}
+                                  onChange={(e) => { setNewNotes((p) => ({ ...p, [step.id]: e.target.value })); setNoteErrorMsg(prev => ({ ...prev, [step.id]: "" })); }}
                                   onKeyDown={(e) => { if (e.key === "Enter") handleConfirmComplete(step.id); if (e.key === "Escape") setConfirmingStepId(null); }}
                                   placeholder="完成备注（可选）..."
                                   className="rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)] w-40"
@@ -375,9 +389,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                 </ul>
                               )}
                               <div className="flex gap-1.5">
-                                <input value={newNotes[step.id] || ""} onChange={(e) => setNewNotes((p) => ({ ...p, [step.id]: e.target.value }))} onKeyDown={(e) => e.key === "Enter" && handleAddNote(step.id)} placeholder="写备注..." className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                                <input value={newNotes[step.id] || ""} onChange={(e) => { setNewNotes((p) => ({ ...p, [step.id]: e.target.value })); setNoteErrorMsg(prev => ({ ...prev, [step.id]: "" })); }} onKeyDown={(e) => e.key === "Enter" && handleAddNote(step.id)} placeholder="写备注..." className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
                                 <button onClick={() => handleAddNote(step.id)} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_15%)]">添加</button>
                               </div>
+                              {noteErrorMsg[step.id] && <p className="text-xs text-[var(--destructive)]">{noteErrorMsg[step.id]}</p>}
                             </div>
 
                             {/* Required documents */}
@@ -482,9 +497,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   <input placeholder="流水单号（可选）" value={newFinSlip} onChange={(e) => setNewFinSlip(e.target.value)} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
                   <label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-1.5 py-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="上传水单">
                     <Paperclip className="size-3" />
-                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingFin(true); setFinFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setFinSlipFile(data.url); await addFinance(id, { type: newFinType, amount: Number(newFinAmount || "0"), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: data.url, status: newFinType === "income" ? "paid" : "pending" }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); load(); } catch { setFinErrorMsg("上传失败"); setFinFileName(""); } finally { setUploadingFin(false); } }} disabled={uploadingFin} />
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingFin(true); setFinFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setFinSlipFile(data.url); await addFinance(id, { type: newFinType, amount: Number(newFinAmount || "0"), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: data.url, status: newFinType === "income" ? "paid" : "pending" }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); reload(); } catch { setFinErrorMsg("上传失败"); setFinFileName(""); } finally { setUploadingFin(false); } }} disabled={uploadingFin} />
                   </label>
-                  <button onClick={async () => { if (!newFinDesc.trim() || !newFinAmount) { setFinErrorMsg("请填写描述和金额"); return; } setFinErrorMsg(""); await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: finSlipFile, status: newFinType === "income" ? "paid" : "pending" }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); load(); }} disabled={uploadingFin} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)] disabled:opacity-50">{uploadingFin ? "上传中..." : "添加"}</button>
+                  <button onClick={async () => { if (!newFinDesc.trim() || !newFinAmount) { setFinErrorMsg("请填写描述和金额"); return; } setFinErrorMsg(""); await addFinance(id, { type: newFinType, amount: Number(newFinAmount), description: newFinDesc, payment_method: newFinMethod, slip_number: newFinSlip, slip_file: finSlipFile, status: newFinType === "income" ? "paid" : "pending" }); setNewFinDesc(""); setNewFinAmount(""); setNewFinMethod(""); setNewFinSlip(""); setFinSlipFile(""); setFinFileName(""); reload(); }} disabled={uploadingFin} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)] disabled:opacity-50">{uploadingFin ? "上传中..." : "添加"}</button>
                 </div>
                 {finErrorMsg && <p className="mt-1 text-xs text-[var(--destructive)]">{finErrorMsg}</p>}
               </div>
@@ -525,7 +540,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     {uploadingDoc ? "上传中..." : "选择文件"}
                     <input type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingDoc(true); setDocFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setDocFileUrl(data.url); } catch { setDocErrorMsg("文件上传失败"); setDocFileName(""); } finally { setUploadingDoc(false); } }} disabled={uploadingDoc} />
                   </label>
-                  <button onClick={async () => { if (!newDocName.trim()) { setDocErrorMsg("请填写文档名"); return; } setDocErrorMsg(""); await uploadDocument(id, { name: newDocName, uploaded_by: "Bam", direction: "client_to_us", file_url: docFileUrl }); setNewDocName(""); setDocFileUrl(""); setDocFileName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
+                  <button onClick={async () => { if (!newDocName.trim()) { setDocErrorMsg("请填写文档名"); return; } setDocErrorMsg(""); await uploadDocument(id, { name: newDocName, uploaded_by: "Bam", direction: "client_to_us", file_url: docFileUrl }); setNewDocName(""); setDocFileUrl(""); setDocFileName(""); reload(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">添加</button>
                 </div>
                 {docFileName && <p className="text-xs text-[var(--muted-foreground)]">已选择: {docFileName}</p>}
                 </div>
@@ -600,7 +615,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 {!isClient && (<>
                 <div className="mt-3 flex gap-2">
                   <input placeholder="证书编号…" value={newCertNo} onChange={(e) => { setNewCertNo(e.target.value); setCertErrorMsg(""); }} className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
-                  <button onClick={async () => { if (!newCertNo.trim()) { setCertErrorMsg("请填写证书编号"); return; } setCertErrorMsg(""); await addCertificate(id, { certificate_number: newCertNo, issue_date: new Date().toISOString().slice(0, 10), expiry_date: new Date(Date.now() + 365*86400000).toISOString().slice(0, 10), file_url: certFileUrl }); setNewCertNo(""); setCertFileUrl(""); setCertFileName(""); load(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)]"><Plus className="size-3" /></button>
+                  <button onClick={async () => { if (!newCertNo.trim()) { setCertErrorMsg("请填写证书编号"); return; } setCertErrorMsg(""); await addCertificate(id, { certificate_number: newCertNo, issue_date: new Date().toISOString().slice(0, 10), expiry_date: new Date(Date.now() + 365*86400000).toISOString().slice(0, 10), file_url: certFileUrl }); setNewCertNo(""); setCertFileUrl(""); setCertFileName(""); reload(); }} className="shrink-0 rounded-md bg-[var(--primary)] px-2 py-1 text-xs text-[var(--primary-foreground)]"><Plus className="size-3" /></button>
                 </div>
                 <div className="flex gap-1.5 items-center"><label className="shrink-0 cursor-pointer rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">{uploadingCert ? "上传中..." : "选择证书文件"}<input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setUploadingCert(true); setCertFileName(file.name); try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/upload", { method: "POST", body: form }); if (!res.ok) throw new Error(""); const data = await res.json(); setCertFileUrl(data.url); } catch { setCertErrorMsg("文件上传失败"); setCertFileName(""); } finally { setUploadingCert(false); } }} disabled={uploadingCert} /></label>{certFileName && <span className="text-xs text-[var(--muted-foreground)] truncate max-w-[120px]">{certFileName}</span>}</div>
                 </>

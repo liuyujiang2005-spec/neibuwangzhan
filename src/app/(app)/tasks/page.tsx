@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { Plus, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,16 +35,11 @@ const columnBg: Record<string, string> = {
 export default function TasksPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const businessFilter = searchParams.get("biz");
   const [filter, setFilter] = useState<string>("all");
   const [taskList, setTaskList] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [businessFilter, setBusinessFilter] = useState<string | null>(null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const biz = params.get("biz");
-    if (biz) setBusinessFilter(biz);
-  }, []);
 
   useEffect(() => {
     async function load() {

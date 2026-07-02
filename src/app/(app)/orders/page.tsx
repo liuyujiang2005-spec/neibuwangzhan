@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Search, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -19,25 +19,25 @@ export default function OrdersPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (bt?: string, st?: string) => {
-    try {
-      setLoading(true);
-      const params: { business_type_id?: number; status?: string } = {};
-      if (bt && bt !== "all") params.business_type_id = Number(bt);
-      if (st && st !== "all") params.status = st;
-      const data = await fetchOrders(params);
-      setOrders(data);
-    } catch (err) {
-      console.error("Orders load error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    load(businessFilter, statusFilter);
+    let ignore = false;
+    async function run() {
+      try {
+        const params: { business_type_id?: number; status?: string } = {};
+        if (businessFilter && businessFilter !== "all") params.business_type_id = Number(businessFilter);
+        if (statusFilter && statusFilter !== "all") params.status = statusFilter;
+        const data = await fetchOrders(params);
+        if (!ignore) setOrders(data);
+      } catch (err) {
+        console.error("Orders load error:", err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+    run();
     fetchBusinessTypes().then(setBusinessTypes).catch(() => {});
-  }, [businessFilter, statusFilter, load]);
+    return () => { ignore = true; };
+  }, [businessFilter, statusFilter]);
 
   const filtered = search
     ? orders.filter((o) =>

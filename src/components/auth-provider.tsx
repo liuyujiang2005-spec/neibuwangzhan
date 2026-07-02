@@ -36,10 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedToken = localStorage.getItem("authToken");
     if (!storedToken) {
-      setLoading(false);
+      Promise.resolve().then(() => setLoading(false));
       return;
     }
-    setToken(storedToken);
     fetch("/api/auth/me", {
       headers: { Authorization: `Bearer ${storedToken}` },
     })
@@ -48,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return res.json();
       })
       .then((userData) => {
+        setToken(storedToken);
         setUserState(userData);
         // 同步存一份用户信息方便读取（不敏感）
         localStorage.setItem("currentUser", JSON.stringify(userData));
