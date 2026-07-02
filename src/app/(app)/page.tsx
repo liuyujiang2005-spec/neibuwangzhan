@@ -67,11 +67,11 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
-          <StatCard label="总订单" value={stats.total_orders} />
+          <StatCard label="总订单" value={stats.total_orders} href="/orders" />
         </div>
-        <StatCard label="进行中" value={stats.in_progress} />
-        <StatCard label="已完成" value={stats.completed} />
-        <StatCard label="今日待办" value={stats.today_todos} />
+        <StatCard label="进行中" value={stats.in_progress} href="/orders?status=进行中" />
+        <StatCard label="已完成" value={stats.completed} href="/orders?status=已完成" />
+        <StatCard label="今日待办" value={stats.today_todos} href="/tasks" />
       </div>
 
       <BusinessChart data={businessCounts} />
