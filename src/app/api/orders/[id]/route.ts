@@ -84,6 +84,7 @@ export async function DELETE(
     db.prepare("DELETE FROM documents WHERE order_id = ?").run(id);
     db.prepare("DELETE FROM finances WHERE order_id = ?").run(id);
     db.prepare("DELETE FROM certificates WHERE order_id = ?").run(id);
+    db.prepare("DELETE FROM tasks WHERE order_id = ?").run(id);
     db.prepare("DELETE FROM orders WHERE id = ?").run(id);
   })();
 

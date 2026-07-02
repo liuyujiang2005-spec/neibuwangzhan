@@ -269,9 +269,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       router.push("/orders");
     } catch (err) {
       console.error("删除订单失败:", err);
-      setError("删除失败");
+      setError("删除失败，请重试");
       setDeletingOrder(false);
-      setDeleteTarget(null);
     }
   };
 
