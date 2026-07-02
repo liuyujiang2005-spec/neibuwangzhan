@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Plus, FileText, ClipboardList, Search } from "lucide-react";
+import { Plus, FileText, ClipboardList, Search, ArrowLeft } from "lucide-react";
 import { fetchOrders, fetchBusinessTypes } from "@/lib/api";
 import { statusClass, statusLabels } from "@/lib/api";
 import type { Order, BusinessType } from "@/lib/api";
@@ -80,7 +80,12 @@ export function BusinessLinePage({ businessKey, label, accentHue, description, s
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>{label}</h1>
+        <div className="flex items-center gap-2 mb-1">
+          <Link href="/" className="shrink-0 rounded-md p-1 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" aria-label="返回仪表盘">
+            <ArrowLeft className="size-4" />
+          </Link>
+          <h1 className="font-display text-2xl font-light tracking-tight text-[var(--foreground)]" style={{ textWrap: "balance" }}>{label}</h1>
+        </div>
         <p className="mt-1.5 text-sm text-[var(--muted-foreground)] leading-relaxed">{description}</p>
       </div>
 
