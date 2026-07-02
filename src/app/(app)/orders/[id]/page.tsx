@@ -3,9 +3,9 @@
 import { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, DollarSign, Paperclip, Plus, Upload, MessageSquare, CheckCircle2, Circle, Pencil, Trash2, Edit3, Save, X } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, Paperclip, Plus, Upload, MessageSquare, CheckCircle2, Circle, Pencil, Trash2, Edit3, Save, X, Undo2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { fetchOrder, updateStep, fetchDocuments, fetchFinances, uploadDocument, addFinance, fetchStepNotes, addStepNote, fetchStepDocuments, markStepDocumentUploaded, fetchCertificates, addCertificate, updateCertificate, fetchEmployees, fetchBusinessTypes, updateOrder, deleteOrder, type Employee } from "@/lib/api";
+import { fetchOrder, updateStep, fetchDocuments, fetchFinances, uploadDocument, addFinance, updateFinance, deleteFinance, fetchStepNotes, addStepNote, fetchStepDocuments, markStepDocumentUploaded, fetchCertificates, addCertificate, updateCertificate, deleteCertificate, fetchEmployees, fetchBusinessTypes, updateOrder, deleteOrder, type Employee } from "@/lib/api";
 import { statusClass, statusLabels } from "@/lib/api";
 import type { BusinessType } from "@/lib/api";
 import type { Order, OrderStep, Document, Finance, StepNote, StepDocument, Certificate } from "@/lib/api";
@@ -76,6 +76,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [savingOrder, setSavingOrder] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{id:string,name:string}|null>(null);
   const [deletingOrder, setDeletingOrder] = useState(false);
+  // 费用编辑删除
+  const [editingFinanceId, setEditingFinanceId] = useState<number | null>(null);
+  const [editFinanceFields, setEditFinanceFields] = useState<Partial<Finance>>({});
+  const [deleteFinanceTarget, setDeleteFinanceTarget] = useState<number | null>(null);
+  const [deletingFinance, setDeletingFinance] = useState(false);
+  // 证书删除
+  const [deleteCertTarget, setDeleteCertTarget] = useState<number | null>(null);
+  const [deletingCert, setDeletingCert] = useState(false);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const reload = useCallback(() => setRefreshKey((k) => k + 1), []);
@@ -151,6 +159,46 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       await updateStep(id, stepId, { status: "已完成" });
       reload();
     } catch { setError("更新失败"); }
+  };
+
+  // 步骤撤回
+  const handleRollback = async (stepId: number) => {
+    try {
+      await updateStep(id, stepId, { status: "进行中" });
+      reload();
+    } catch { setError("撤回失败"); }
+  };
+
+  // 费用保存
+  const handleSaveFinance = async (financeId: number) => {
+    try {
+      await updateFinance(id, financeId, editFinanceFields);
+      setEditingFinanceId(null);
+      setEditFinanceFields({});
+      reload();
+    } catch { setError("保存费用失败"); }
+  };
+
+  // 费用删除
+  const handleDeleteFinance = async () => {
+    if (!deleteFinanceTarget) return;
+    setDeletingFinance(true);
+    try {
+      await deleteFinance(id, deleteFinanceTarget);
+      setDeleteFinanceTarget(null);
+      reload();
+    } catch { setError("删除费用失败"); setDeletingFinance(false); setDeleteFinanceTarget(null); }
+  };
+
+  // 证书删除
+  const handleDeleteCert = async () => {
+    if (!deleteCertTarget) return;
+    setDeletingCert(true);
+    try {
+      await deleteCertificate(id, deleteCertTarget);
+      setDeleteCertTarget(null);
+      reload();
+    } catch { setError("删除证书失败"); setDeletingCert(false); setDeleteCertTarget(null); }
   };
 
   const handleSaveCert = async (certId: number) => {
@@ -492,7 +540,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                           </div>
                         )}
                         {step.status === "已完成" && step.completed_at && (
-                          <p className="mt-1 text-xs text-[var(--muted-foreground)]">完成于 {toThaiTime(step.completed_at)}</p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <p className="text-xs text-[var(--muted-foreground)]">完成于 {toThaiTime(step.completed_at)}</p>
+                            {!isClient && (
+                              <button onClick={() => handleRollback(step.id)} className="inline-flex items-center gap-1 rounded border border-[var(--border)] px-1.5 py-0.5 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors">
+                                <Undo2 className="size-3" />撤回
+                              </button>
+                            )}
+                          </div>
                         )}
 
                         {/* Expand/collapse for notes + docs */}
@@ -593,21 +648,55 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <ul className="flex flex-col gap-2">
                   {finances.map((f) => (
                     <li key={f.id} className="rounded-md p-2 transition-colors hover:bg-[var(--secondary)]">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("inline-flex rounded px-1.5 py-0.5 text-[0.6rem] font-medium", f.type === "income" ? "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]" : "bg-[color-mix(in_oklch,var(--destructive),var(--background)_92%)] text-[var(--destructive)]")}>{f.type === "income" ? "收入" : "支出"}</span>
-                        <span className="text-xs font-mono font-medium text-[var(--foreground)]">{f.type === "income" ? "+" : "-"}¥{f.amount.toLocaleString()}</span>
-                        <span className={cn("inline-flex rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium ml-auto", f.status === "paid" ? "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]" : f.status === "pending" ? "bg-[color-mix(in_oklch,var(--warning),var(--background)_85%)] text-[var(--warning)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]")}>{f.status === "paid" ? "已付" : f.status === "pending" ? "待付" : "已取消"}</span>
-                      </div>
-                      {f.description && <p className="mt-0.5 text-xs text-[var(--foreground)]">{f.description}</p>}
-                      {(f.payment_method || f.slip_number) && <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]">{f.payment_method || ""}{f.payment_method && f.slip_number && " · "}{f.slip_number ? "流水号 " + f.slip_number : ""}</p>}
-                      {f.slip_file && (
-                        <p className="mt-0.5">
-                          {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(f.slip_file) ? (
-                            <img src={f.slip_file} alt="水单" className="max-h-16 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(f.slip_file ?? null)} />
-                          ) : (
-                            <a href={f.slip_file} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看水单</a>
+                      {editingFinanceId === f.id ? (
+                        <div className="space-y-1.5">
+                          <div className="flex gap-1.5">
+                            <select value={editFinanceFields.type || f.type} onChange={(e) => setEditFinanceFields(p => ({ ...p, type: e.target.value }))} className="w-16 rounded-md border border-[var(--border)] bg-[var(--background)] px-1 py-1 text-xs outline-none focus:border-[var(--ring)]">
+                              <option value="income">收入</option>
+                              <option value="expense">支出</option>
+                            </select>
+                            <input type="number" value={editFinanceFields.amount ?? f.amount} onChange={(e) => setEditFinanceFields(p => ({ ...p, amount: Number(e.target.value) }))} className="w-24 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                            <select value={editFinanceFields.status || f.status} onChange={(e) => setEditFinanceFields(p => ({ ...p, status: e.target.value }))} className="w-16 rounded-md border border-[var(--border)] bg-[var(--background)] px-1 py-1 text-xs outline-none focus:border-[var(--ring)]">
+                              <option value="paid">已付</option>
+                              <option value="pending">待付</option>
+                              <option value="cancelled">已取消</option>
+                            </select>
+                          </div>
+                          <input value={editFinanceFields.description ?? f.description ?? ""} onChange={(e) => setEditFinanceFields(p => ({ ...p, description: e.target.value }))} placeholder="描述…" className="w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                          <div className="flex gap-1.5">
+                            <input value={editFinanceFields.payment_method ?? f.payment_method ?? ""} onChange={(e) => setEditFinanceFields(p => ({ ...p, payment_method: e.target.value }))} placeholder="付款方式" className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                            <input value={editFinanceFields.slip_number ?? f.slip_number ?? ""} onChange={(e) => setEditFinanceFields(p => ({ ...p, slip_number: e.target.value }))} placeholder="流水号" className="flex-1 rounded-md border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-xs outline-none focus:border-[var(--ring)]" />
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => handleSaveFinance(f.id)} className="rounded px-2 py-1 text-xs bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_20%)]">保存</button>
+                            <button onClick={() => { setEditingFinanceId(null); setEditFinanceFields({}); }} className="rounded px-2 py-1 text-xs text-[var(--muted-foreground)] hover:bg-[var(--muted)]">取消</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("inline-flex rounded px-1.5 py-0.5 text-[0.6rem] font-medium", f.type === "income" ? "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]" : "bg-[color-mix(in_oklch,var(--destructive),var(--background)_92%)] text-[var(--destructive)]")}>{f.type === "income" ? "收入" : "支出"}</span>
+                            <span className="text-xs font-mono font-medium text-[var(--foreground)]">{f.type === "income" ? "+" : "-"}¥{f.amount.toLocaleString()}</span>
+                            <span className={cn("inline-flex rounded-full px-1.5 py-0.5 text-[0.6rem] font-medium ml-auto", f.status === "paid" ? "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]" : f.status === "pending" ? "bg-[color-mix(in_oklch,var(--warning),var(--background)_85%)] text-[var(--warning)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]")}>{f.status === "paid" ? "已付" : f.status === "pending" ? "待付" : "已取消"}</span>
+                            {!isClient && (
+                              <div className="flex items-center gap-0.5">
+                                <button onClick={() => { setEditingFinanceId(f.id); setEditFinanceFields({ type: f.type, amount: f.amount, description: f.description, payment_method: f.payment_method, slip_number: f.slip_number, status: f.status }); }} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="编辑"><Pencil className="size-3" /></button>
+                                <button onClick={() => setDeleteFinanceTarget(f.id)} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--destructive)]/10 hover:text-[var(--destructive)] transition-colors" title="删除"><Trash2 className="size-3" /></button>
+                              </div>
+                            )}
+                          </div>
+                          {f.description && <p className="mt-0.5 text-xs text-[var(--foreground)]">{f.description}</p>}
+                          {(f.payment_method || f.slip_number) && <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]">{f.payment_method || ""}{f.payment_method && f.slip_number && " · "}{f.slip_number ? "流水号 " + f.slip_number : ""}</p>}
+                          {f.slip_file && (
+                            <p className="mt-0.5">
+                              {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(f.slip_file) ? (
+                                <img src={f.slip_file} alt="水单" className="max-h-16 rounded border border-[var(--border)] cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewUrl(f.slip_file ?? null)} />
+                              ) : (
+                                <a href={f.slip_file} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--primary)] hover:underline">查看水单</a>
+                              )}
+                            </p>
                           )}
-                        </p>
+                        </>
                       )}
                     </li>
                   ))}
@@ -728,6 +817,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                               <div className="flex items-center gap-1.5">
                                 <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[0.65rem] font-medium", dynStatus === "expiring" ? "bg-[color-mix(in_oklch,var(--warning),var(--background)_85%)] text-[var(--warning)]" : dynStatus === "expired" ? "bg-[color-mix(in_oklch,var(--destructive),var(--background)_92%)] text-[var(--destructive)]" : "bg-[color-mix(in_oklch,var(--success),var(--background)_85%)] text-[var(--success)]")}>{dynStatus === "expiring" ? "即将到期" : dynStatus === "expired" ? "已过期" : "有效"}</span>
                                 <button onClick={() => { if (isClient) return; setEditingCertId(cert.id); setEditCertFields({ certificate_number: cert.certificate_number, product_name: cert.product_name, issue_date: cert.issue_date, expiry_date: cert.expiry_date, nsw_registration: cert.nsw_registration, nsw_download_status: cert.nsw_download_status, notes: cert.notes, status: cert.status, file_url: cert.file_url }); setCertFileName(""); setCertFileUrl(""); }} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors" title="编辑证书"><Pencil className="size-3" /></button>
+                                <button onClick={() => setDeleteCertTarget(cert.id)} className="rounded p-0.5 text-[var(--muted-foreground)] hover:bg-[var(--destructive)]/10 hover:text-[var(--destructive)] transition-colors" title="删除证书"><Trash2 className="size-3" /></button>
                               </div>
                             </div>
                             {cert.product_name && <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{cert.product_name}</p>}

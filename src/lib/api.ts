@@ -242,6 +242,26 @@ export async function addFinance(orderId: string, data: { type: string; amount: 
   return res.json() as Promise<Finance>;
 }
 
+export async function updateFinance(orderId: string, financeId: number, data: Partial<{ type: string; amount: number; description: string; payment_method: string; slip_number: string; slip_file: string; status: string }>) {
+  const res = await fetch(`/api/orders/${orderId}/finances`, {
+    method: "PATCH",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ finance_id: financeId, ...data }),
+  });
+  if (!res.ok) throw new Error("更新费用失败");
+  return res.json() as Promise<Finance>;
+}
+
+export async function deleteFinance(orderId: string, financeId: number) {
+  const res = await fetch(`/api/orders/${orderId}/finances`, {
+    method: "DELETE",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ finance_id: financeId }),
+  });
+  if (!res.ok) throw new Error("删除费用失败");
+  return res.json();
+}
+
 export async function fetchStepNotes(orderId: string, stepId: number) {
   const res = await fetch(`/api/orders/${orderId}/steps/${stepId}/notes`, { headers: authHeaders() });
   if (!res.ok) throw new Error("获取备注失败");
@@ -297,6 +317,16 @@ export async function updateCertificate(orderId: string, certId: number, data: P
     body: JSON.stringify({ cert_id: certId, ...data }),
   });
   if (!res.ok) throw new Error("更新证书失败");
+  return res.json();
+}
+
+export async function deleteCertificate(orderId: string, certId: number) {
+  const res = await fetch(`/api/orders/${orderId}/certificates`, {
+    method: "DELETE",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ cert_id: certId }),
+  });
+  if (!res.ok) throw new Error("删除证书失败");
   return res.json();
 }
 

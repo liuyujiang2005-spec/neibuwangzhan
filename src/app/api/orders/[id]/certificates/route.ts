@@ -66,3 +66,21 @@ export async function PATCH(
   const cert = db.prepare("SELECT * FROM certificates WHERE id = ?").get(cert_id);
   return NextResponse.json(cert);
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const db = getDb();
+  const body = await req.json();
+  const { cert_id } = body;
+
+  if (!cert_id) return NextResponse.json({ error: "缺少 cert_id" }, { status: 400 });
+
+  const existing = db.prepare("SELECT * FROM certificates WHERE id = ? AND order_id = ?").get(cert_id, id);
+  if (!existing) return NextResponse.json({ error: "证书不存在" }, { status: 404 });
+
+  db.prepare("DELETE FROM certificates WHERE id = ?").run(cert_id);
+  return NextResponse.json({ success: true });
+}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 
 // PATCH /api/orders/:id/steps
@@ -6,6 +7,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await verifyAuth(req);
+  if (!auth) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
   const { id } = await params;
   const db = getDb();
   const body = await req.json();
@@ -46,6 +50,9 @@ export async function PATCH(
   }
   if (status === "已完成") {
     updates.push("completed_at = datetime('now')");
+  } else {
+    // 撤回：清空完成时间
+    updates.push("completed_at = NULL");
   }
 
   values.push(step_id, id);
